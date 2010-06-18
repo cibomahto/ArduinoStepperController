@@ -37,25 +37,23 @@
  * 
  * ERROR msg
  * ERROR is sent by the controller when something bad happens.  msg described what happened
+ *
+ * ALIVE
+ * ACK ALIVE
+ *
+ * Confirm that the controller is alive and accepting input
+ *
+ 
 */
 
 
 #include "commands.h"
 
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 
-#ifdef LINUX_DEBUG
-#include <stdio.h>
-#else
+
 #include <HardwareSerial.h>
-#endif
-
-
-static char cmdBuf[CMD_BUF_LEN+1];
-static char paramBuf[CMD_BUF_LEN+1];
-static char cmdBufIdx = 0;
 
 enum MESSAGE_VALUE_TYPE {
   MT_INTEGER,
@@ -65,7 +63,7 @@ enum MESSAGE_VALUE_TYPE {
 
 struct ParameterDefinition {
   const char *name;
-  enum PARAMETER param;
+  PARAMETER param;
   int num_values; //some parameters may take more than one value: "SET MAX_SPEED axis speed", for eg.
 };
 
@@ -81,51 +79,61 @@ struct ParameterDefinition parameters[] = {
 
 struct MessageTypeDefinition {
   const char *name;
-  enum MESSAGE_TYPE type;  
+  MESSAGE_TYPE type;  
   enum MESSAGE_VALUE_TYPE *values;
 };
 
-static enum MESSAGE_VALUE_TYPE NO_VALUES[]     = {NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE GO_VALUES[]     = {MT_INTEGER, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE GETPOS_VALUES[] = {MT_INTEGER, NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE SET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE GET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE HOME_VALUES[]   = {MT_INTEGER, NOT_A_VALUE};
+static MESSAGE_VALUE_TYPE NO_VALUES[]     = {NOT_A_VALUE};
+static MESSAGE_VALUE_TYPE GO_VALUES[]     = {MT_INTEGER, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
+static MESSAGE_VALUE_TYPE GETPOS_VALUES[] = {MT_INTEGER, NOT_A_VALUE};
+static MESSAGE_VALUE_TYPE SET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
+static MESSAGE_VALUE_TYPE GET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, NOT_A_VALUE};
+static MESSAGE_VALUE_TYPE HOME_VALUES[]   = {MT_INTEGER, NOT_A_VALUE};
 
-static struct MessageTypeDefinition messages[] = {
-  { "GO",     M_GO         , GO_VALUES  },    //GO axis position time
-  { "GETPOS", M_GETPOS     , GETPOS_VALUES }, //GETPOS axis
-  { "SET",    M_SET        , SET_VALUES },    //SET param axis value
-  { "GET",    M_GET        , GET_VALUES },    //GET param axis
-  { "HOME",   M_HOME       , HOME_VALUES  },  //HOME axis
-  { "STATE",  M_STATE      , NO_VALUES  },    //STATE
+static MessageTypeDefinition messages[] = {
+  { "GO",     M_GO         , GO_VALUES  },    // GO axis position time
+  { "GETPOS", M_GETPOS     , GETPOS_VALUES }, // GETPOS axis
+  { "SET",    M_SET        , SET_VALUES },    // SET param axis value
+  { "GET",    M_GET        , GET_VALUES },    // GET param axis
+  { "HOME",   M_HOME       , HOME_VALUES  },  // HOME axis
+  { "STATE",  M_STATE      , NO_VALUES  },    // STATE
+  { "ALIVE",  M_ALIVE      , NO_VALUES  },    // ALIVE
   { NULL,  NOT_A_MESSAGE, NULL },
-};static CommandHandler cmdHandler;
+};
 
 
-//returns non-zero if prefix is the prefix of string
-static int isPrefix( const char *prefix, const char *string ) {
-  return strncmp( prefix, string, strlen(prefix) ) == 0;
+CommandInterpreter::CommandInterpreter(CommandHandler handler) : 
+  cmdBufIdx(0),
+  cmdHandler(handler)
+{
 }
 
 
-//serial abstraction in case we switch api later
-static void sendReply( const char *str ) {
-#ifdef LINUX_DEBUG
-  printf( str );
-  printf( "\n" );
-#else
-  Serial.println( str );
-#endif
+void CommandInterpreter::begin(unsigned int baudrate)
+{
+  Serial.begin(baudrate);
+}
+
+void CommandInterpreter::sendERROR( const char* message ) {
+  Serial.print("ERROR ");
+  Serial.print(message);
+  Serial.print("\n");
+}
+
+
+void CommandInterpreter::sendACK( const char* message ) {
+  Serial.print("ACK ");
+  Serial.print(message);
+  Serial.print("\n");
 }
 
 
 //returns the index of the character after the last charater in the message type or -1
 //sets msg->type and msg->typeDefIdx
-static int parseCmdType( const char *cmd, struct Message *msg ) {
+int CommandInterpreter::parseCmdType( const char *cmd, Message *msg ) {
   int i=0;
   while( messages[i].name != NULL ) {
-    if( isPrefix( messages[i].name, cmd ) ) {
+    if( strncmp( cmd, messages[i].name, strlen(messages[i].name) ) == 0 ) {
       msg->type = messages[i].type;
       msg->typeDefIdx = i;
       return strlen(messages[i].name);
@@ -133,13 +141,13 @@ static int parseCmdType( const char *cmd, struct Message *msg ) {
     i++;
   }
  
-  sendReply( "ERROR message had unknown prefix" );
+  sendERROR( "message had unknown prefix" );
   msg->type = NOT_A_MESSAGE;
   return -1;
 }
 
 
-enum PARAMETER parseParamName( const char *name ) {
+PARAMETER CommandInterpreter::parseParamName( const char *name ) {
   int i=0;
   while( parameters[i].name != NULL ) {
     if( strcmp( name, parameters[i].name ) == 0 ) {
@@ -153,11 +161,11 @@ enum PARAMETER parseParamName( const char *name ) {
 
 //pre: msg->type is the type of message in cmd
 //post: msg->fields is filled in or non-zero is returned
-int parseMessageValues( const char *str, struct Message *msg ) {
+boolean CommandInterpreter::parseMessageValues( const char *str, Message *msg ) {
   int strIdx = 0;
   int valIdx = 0;
  
-  struct MessageTypeDefinition *mt = &messages[msg->typeDefIdx];
+  MessageTypeDefinition *mt = &messages[msg->typeDefIdx];
   
   while( mt->values[valIdx] != NOT_A_VALUE ) {
     //advance past leading whitespace
@@ -176,63 +184,63 @@ int parseMessageValues( const char *str, struct Message *msg ) {
     }
 
     //advance to the next token
-    while( !isspace(str[strIdx] ) )                       strIdx++;
+    while( !isspace(str[strIdx] ) ) strIdx++;
     valIdx++;
   }
 
-  return 0;
+  return true;
 
  PARSE_ERROR: 
-  sendReply( "ERROR message arguments did not parse" );
+  sendERROR( "message arguments did not parse" );
   msg->type = NOT_A_MESSAGE;
-  return -1;
+  return false;
 }
 
 
 //pre: cmd has a null terminated string ending in newline
 //post: msg contains the new command
 //return: 0 if a valid message was read, non-zero on error
-int processCommand( const char *cmd, struct Message *msg ) {
+boolean CommandInterpreter::processCommand( const char *cmd, Message *msg ) {
   int cmdIdx = 0;
   cmdIdx += parseCmdType( cmd, msg );
 
   if( msg->type == NOT_A_MESSAGE ) {
-    return -1;
+    return false;
   }
 
   return parseMessageValues( cmd + cmdIdx, msg );
 }
 
 
-static struct Message staticMsg; //dont want this on the stack
-
-
-
-void checkSerialInput() {
+void CommandInterpreter::checkSerialInput() {
+  static Message staticMsg;
+  
   if( !Serial.available() ) return;
   
   cmdBuf[cmdBufIdx++] = Serial.read();
   cmdBuf[cmdBufIdx  ] = 0;
 
   if( cmdBuf[cmdBufIdx-1] == '\n' ) {
-    if( 0 != processCommand( cmdBuf, &staticMsg ) ) {
+    if( !processCommand( cmdBuf, &staticMsg ) ) {
       cmdBufIdx = 0;
       return;
     }
+    if( staticMsg.type == M_ALIVE ) {
+      sendACK( "ALIVE" );
+      cmdBufIdx = 0;
+    }
     if( handler == NULL ) {
+      sendERROR( "No way to parse messages!" );
       cmdBufIdx = 0;
       return;
     }
     handler( &staticMsg );
     cmdBufIdx = 0;
   }
+  
   else if( cmdBufIdx == CMD_BUF_LEN ) {
     cmdBufIdx = 0;
-    sendReply( "ERROR ran out of buffer space for message before the newline arrived" );
+    sendERROR( "message too long" );
     return;
   }
-}
-
-void setCommandHandler( CommandHandler handler ) {
-  cmdHandler = handler;
 }

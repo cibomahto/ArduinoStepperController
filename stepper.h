@@ -1,7 +1,6 @@
 #ifndef _STEPPER_H
 #define _STEPPER_H
 
-//#include <stdint.h>
 #include "WProgram.h"
 
 #define MAX_STEPPERS 4

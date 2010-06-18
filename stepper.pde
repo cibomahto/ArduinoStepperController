@@ -157,3 +157,4 @@ long Stepper::getPosition() {
 boolean Stepper::isMoving() {
   return moving;
 }
+
