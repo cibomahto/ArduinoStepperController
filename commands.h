@@ -6,9 +6,11 @@
 
 enum MESSAGE_TYPE {
   M_GO,
-  M_HOME,
+  M_GETPOS,
   M_SET,
-  M_GET,  
+  M_GET,
+  M_HOME,
+  M_STATE,
   NOT_A_MESSAGE,
 };
 

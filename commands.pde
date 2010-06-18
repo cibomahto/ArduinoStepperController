@@ -7,7 +7,7 @@
  * ACK GO axis position time
  * DONE
  * 
- * GO Tells the controller to move AXIS to POSITION taking TIME seconds to get there
+ * GO Tells the controller to move AXIS to POSITION taking TIME miliseconds to get there
  * ACK is sent by the controller immediately after GO recvd.  POSITION and TIME may be modified if POSITION was out of range or TIME was too short.
  * DONE is sent when the move completes
  * 
@@ -85,14 +85,17 @@ struct MessageTypeDefinition {
 
 static enum MESSAGE_VALUE_TYPE NO_VALUES[]  = {NOT_A_VALUE};
 static enum MESSAGE_VALUE_TYPE GO_VALUES[]  = {MT_INTEGER, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
+static enum MESSAGE_VALUE_TYPE GETPOS_VALUES[]  = {MT_INTEGER, NOT_A_VALUE};
 static enum MESSAGE_VALUE_TYPE SET_VALUES[] = {MT_PARAM_NAME, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
 static enum MESSAGE_VALUE_TYPE GET_VALUES[] = {MT_PARAM_NAME, MT_INTEGER, NOT_A_VALUE};
 
 static struct MessageTypeDefinition messages[] = {
   { "GO",  M_GO         , GO_VALUES  }, //GO axis position time
-  { "HOME",M_HOME       , NO_VALUES  }, //HOME
+  { "GETPOS", M_GETPOS  , GETPOS_VALUES  }, //GO axis position time
   { "SET", M_SET        , SET_VALUES }, //SET param axis value
   { "GET", M_GET        , GET_VALUES }, //GET param axis
+  { "HOME",M_HOME       , NO_VALUES  }, //HOME
+  { "STATE",M_STATE     , NO_VALUES  }, //HOME
   { NULL,  NOT_A_MESSAGE, NULL },
 };static CommandHandler cmdHandler;
 

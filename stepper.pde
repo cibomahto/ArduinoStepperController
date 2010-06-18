@@ -8,7 +8,9 @@ ISR(TIMER2_OVF_vect)
 
 
 uint8_t Stepper::stepperCount = 0;
+
 Stepper* registeredSteppers[MAX_STEPPERS];
+
 
 boolean Stepper::registerStepper(Stepper* stepper_) {
   if ( stepperCount >= MAX_STEPPERS ) {
@@ -26,6 +28,16 @@ void Stepper::doStepperInterrupts() {
   }
 }
 
+uint8_t Stepper::count() {
+  return stepperCount;
+}
+
+Stepper& Stepper::getStepper(const int index) {
+  // TODO: Test for validity here?
+  // if ( index < 0 || index >= stepperCount )
+  return *registeredSteppers[index];
+}
+  
 
 Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) {
   resetPin = resetPin_;

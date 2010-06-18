@@ -7,9 +7,13 @@
 #define MAX_STEPPERS 4
 
 class Stepper {
- // Global stepper stuff
+// Global stepper stuff
  public:  
   static void doStepperInterrupts();
+  
+  static uint8_t count();
+  
+  static Stepper& getStepper(const int index);
   
  private:
 //  static Stepper* registeredSteppers[MAX_STEPPERS];
@@ -17,7 +21,7 @@ class Stepper {
 
   static boolean registerStepper(Stepper* stepper_);
   
- // Instance-specific stepper stuff
+// Instance-specific stepper stuff
  private:
   uint8_t resetPin;
   uint8_t stepPin;

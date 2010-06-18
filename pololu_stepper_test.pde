@@ -32,18 +32,27 @@ void setup() {
 
   // Set up Timer 2 to generate interrupts on overflow, and start it.
   // The display is updated in the interrupt routine
+  // TODO: Move this to stepper
   TCCR2A = 0;
   TCCR2B = (0<<CS22)|(1<<CS21)|(0<<CS20);
   TIMSK2 = (1<<TOIE2);
 }
 
+void error( char* description ) {
+  Serial.print("ERR ");
+  Serial.print(description);
+  Serial.print("\n");
+}
 
+void ack() {
+  Serial.print("ACK\n");
+}
 
 void handler( struct Message *msg ) {
-  // TODO: Check that *msg exists
 
+/*
   Serial.print("\n\r");
-  Serial.print("MSG_RECEIVED type=");
+  Serial.print("DEBUG MESSAGE_RECEIVED type=");
   Serial.print(msg->type);
   Serial.print(" fields=(");
   Serial.print(msg->fields[0]);
@@ -53,38 +62,37 @@ void handler( struct Message *msg ) {
   Serial.print(msg->fields[2]);
   Serial.print(", ");
   Serial.print(msg->fields[3]);
-  Serial.print(")\n\r");
+  Serial.print(")\n");
+*/
   
   switch (msg->type) {
     case M_GO:
-      switch (msg->fields[0]) {
-        case 0:
-          stepperA.moveAbsolute(msg->fields[1], msg->fields[2]);
-          break;
-        case 1:
-          stepperB.moveAbsolute(msg->fields[1], msg->fields[2]);
-          break;
-        case 2:
-          stepperC.moveAbsolute(msg->fields[1], msg->fields[2]);
-          break;
-        case 3:
-          stepperD.moveAbsolute(msg->fields[1], msg->fields[2]);
-          break;
-        break;
-      }
+      handleGo(msg->fields[1], msg->fields[1], msg->fields[1]);
       break;
-    case M_HOME:
-      // TODO: Fix motion
-//      stepperA.moveAbsolute((long)0, (long)0);
-      break;
+    case M_GETPOS:
     case M_SET:
-      break;
     case M_GET:
-      break;
+    case M_HOME:
+    case M_STATE:
+    default:
+      // Really we should never reach this.
+      error("Message not understood");
   }
-
 }
 
+void handleGo(uint8_t axis, long position, long time) {
+  if ( axis >= Stepper::count()) {
+    error("Axis out of bounds");
+  }
+  
+  if (Stepper::getStepper(axis).moveAbsolute(position, time)) {
+    ack();
+  }
+  else {
+    // TODO: Give a better reason here?
+    error("Couldn't acheive desired motion");
+  }
+}
 
 
 char buf[256];
