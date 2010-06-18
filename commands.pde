@@ -159,7 +159,7 @@ int parseMessageValues( const char *str, struct Message *msg ) {
   
   while( mt->values[valIdx] != NOT_A_VALUE ) {
     //advance past leading whitespace
-    while( !isalnum( str[strIdx]) && str[strIdx] != 0 )  strIdx++;
+    while( isspace( str[strIdx]) && str[strIdx] != 0 )  strIdx++;
 
     switch( mt->values[valIdx] ) {
     case MT_INTEGER:
@@ -174,7 +174,7 @@ int parseMessageValues( const char *str, struct Message *msg ) {
     }
 
     //advance to the next token
-    while( isalnum(str[strIdx] ) )                       strIdx++;
+    while( !isspace(str[strIdx] ) )                       strIdx++;
     valIdx++;
   }
 
