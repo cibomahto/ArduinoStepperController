@@ -38,16 +38,24 @@ void setup() {
   TIMSK2 = (1<<TOIE2);
 }
 
-void error( char* description ) {
-  Serial.print("ERR ");
-  Serial.print(description);
+void error( char* message ) {
+  Serial.print("ERROR ");
+  Serial.print(message);
   Serial.print("\n");
 }
 
 void ack() {
-  Serial.print("ACK\n");
+  ack ("");
+
 }
 
+void ack( char* message ) {
+  Serial.print("ACK ");
+  Serial.print(message);
+  Serial.print("\n");
+}
+  
+  
 void handler( struct Message *msg ) {
 
 /*
@@ -67,9 +75,11 @@ void handler( struct Message *msg ) {
   
   switch (msg->type) {
     case M_GO:
-      handleGo(msg->fields[1], msg->fields[1], msg->fields[1]);
+      handleGO(msg->fields[0], msg->fields[1], msg->fields[2]);
       break;
     case M_GETPOS:
+      handleGETPOS(msg->fields[0]);
+      break;
     case M_SET:
     case M_GET:
     case M_HOME:
@@ -80,7 +90,7 @@ void handler( struct Message *msg ) {
   }
 }
 
-void handleGo(uint8_t axis, long position, long time) {
+void handleGO(uint8_t axis, long position, long time) {
   if ( axis >= Stepper::count()) {
     error("Axis out of bounds");
   }
@@ -92,6 +102,18 @@ void handleGo(uint8_t axis, long position, long time) {
     // TODO: Give a better reason here?
     error("Couldn't acheive desired motion");
   }
+}
+
+void handleGETPOS(uint8_t axis) {
+  if ( axis >= Stepper::count()) {
+    error("Axis out of bounds");
+  }
+  
+  long position = Stepper::getStepper(axis).getPosition();
+  char buffer[50];
+  sprintf(buffer, "GETPOS %d %ld", axis, position);
+  
+  ack(buffer);
 }
 
 
