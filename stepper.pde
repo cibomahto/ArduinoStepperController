@@ -8,9 +8,16 @@ ISR(TIMER2_OVF_vect)
 
 
 uint8_t Stepper::stepperCount = 0;
+unsigned int Stepper::frequency = 0;
 
 Stepper* registeredSteppers[MAX_STEPPERS];
 
+void Stepper::setup(unsigned int frequency_) {
+
+  // TODO: actually set up the timer using the given frequency
+  
+  frequency = frequency_;  
+}
 
 boolean Stepper::registerStepper(Stepper* stepper_) {
   if ( stepperCount >= MAX_STEPPERS ) {
@@ -19,6 +26,7 @@ boolean Stepper::registerStepper(Stepper* stepper_) {
     
   registeredSteppers[stepperCount] = stepper_;
   stepperCount++;
+  
   return true;
 }
 
@@ -33,7 +41,7 @@ uint8_t Stepper::count() {
 }
 
 Stepper& Stepper::getStepper(const int index) {
-  // TODO: Test for validity here?
+  // TODO: Test for out-of-bounds here?
   // if ( index < 0 || index >= stepperCount )
   return *registeredSteppers[index];
 }
@@ -43,7 +51,7 @@ Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) {
   resetPin = resetPin_;
   stepPin = stepPin_;
   directionPin = directionPin_;
-  running = false;
+  moving = false;
 
   pinMode(resetPin, OUTPUT);
   pinMode(stepPin, OUTPUT);
@@ -70,6 +78,14 @@ boolean Stepper::moveAbsolute(long newPosition, long ticks) {
 
 boolean Stepper::moveRelative(long counts, long ticks) {
   
+  if ( moving ) {
+    return false;
+  }
+
+  if (counts == 0) {
+    return true;
+  }
+  
   if (counts > ticks || ticks == 0) {
     return false;
   }
@@ -89,7 +105,7 @@ boolean Stepper::moveRelative(long counts, long ticks) {
   deltay = abs(counts);  
   error = deltax / 2;
   
-  running = true;
+  moving = true;
   
   return true;
 }
@@ -112,18 +128,7 @@ boolean Stepper::moveRelative(long counts, long ticks) {
 
 
 void Stepper::doInterrupt() {
-  if (running) {
-//  Serial.print("countsLeft=");
-//  Serial.print(countsLeft);
-
-//  Serial.print(" ticsPerCount=");
-//  Serial.print(ticksPerCount);
-  
-//  Serial.print(" nextTick=");
-//  Serial.print(nextTick);
-  
-//  Serial.print("\n\r");
-
+  if (moving) {
     error = error - deltay;
     if (error < 0) {
       // Do movement
@@ -137,7 +142,7 @@ void Stepper::doInterrupt() {
       error = error + deltax;
       
       if (countsLeft == 0) {
-        running = false;
+        moving = false;
       } 
     }
   }
@@ -148,3 +153,7 @@ long Stepper::getPosition() {
   return position;
 }
 
+
+boolean Stepper::isMoving() {
+  return moving;
+}

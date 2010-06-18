@@ -17,10 +17,9 @@ Stepper stepperD(17, 18, 19);
 void setup() {
   Serial.begin(9600);
 
-  // Setup the command handler function
-  setCommandHandler( handler );
+  Stepper::setup(0);
 
-/*
+  /*
  * 0 0 1 clkT2S/(No prescaling)
  * 0 1 0 clkT2S/8 (From prescaler)
  * 0 1 1 clkT2S/32 (From prescaler)
@@ -30,12 +29,17 @@ void setup() {
  * 1 1 1 clkT2S/1024 (From prescaler)
 */
 
+
   // Set up Timer 2 to generate interrupts on overflow, and start it.
   // The display is updated in the interrupt routine
   // TODO: Move this to stepper
+
   TCCR2A = 0;
   TCCR2B = (0<<CS22)|(1<<CS21)|(0<<CS20);
   TIMSK2 = (1<<TOIE2);
+
+  // Setup the command handler function
+  setCommandHandler( handler );
 }
 
 void error( char* message ) {
@@ -44,10 +48,6 @@ void error( char* message ) {
   Serial.print("\n");
 }
 
-void ack() {
-  ack ("");
-
-}
 
 void ack( char* message ) {
   Serial.print("ACK ");
@@ -81,12 +81,17 @@ void handler( struct Message *msg ) {
       handleGETPOS(msg->fields[0]);
       break;
     case M_SET:
+      error("SET not supported in this firmware");
+      break;
     case M_GET:
+      error("GET not supported in this firmware");
+      break;
     case M_HOME:
+      error("HOME not supported in this firmware");
+      break;
     case M_STATE:
-    default:
-      // Really we should never reach this.
-      error("Message not understood");
+      handleSTATE();
+      break;
   }
 }
 
@@ -96,7 +101,9 @@ void handleGO(uint8_t axis, long position, long time) {
   }
   
   if (Stepper::getStepper(axis).moveAbsolute(position, time)) {
-    ack();
+    char buffer[50];
+    sprintf(buffer, "GO %d %ld %ld", axis, position, time);
+    ack(buffer);
   }
   else {
     // TODO: Give a better reason here?
@@ -116,9 +123,25 @@ void handleGETPOS(uint8_t axis) {
   ack(buffer);
 }
 
+void handleSTATE() {
+  // Try to determine the state... we don't support ERROR or HOMING, so it has
+  // to be READY or GOING
+  boolean isMoving = false;
 
-char buf[256];
-struct Message msg;
+  for ( uint8_t axis = 0; axis < Stepper::count(); axis++) {
+    if (Stepper::getStepper(axis).isMoving()) {
+      isMoving = true;
+    }
+  }
+  
+  if ( isMoving ) {
+    ack("STATE GOING");
+  }
+  else {
+    ack("STATE READY");
+  }
+}
+
 
 void loop() {
   

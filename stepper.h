@@ -15,9 +15,13 @@ class Stepper {
   
   static Stepper& getStepper(const int index);
   
+  static void setup(unsigned int frequency_);
+  
  private:
 //  static Stepper* registeredSteppers[MAX_STEPPERS];
   static uint8_t stepperCount;
+  
+  static unsigned int frequency;
 
   static boolean registerStepper(Stepper* stepper_);
   
@@ -28,7 +32,7 @@ class Stepper {
   uint8_t directionPin;
   
 
-  boolean running;    //< Whether we are running or not
+  boolean moving;    //< Whether we are running or not
   
   long position;      //< Current position
   long countsLeft;    //< Number of counts until final position is reached
@@ -52,7 +56,7 @@ class Stepper {
   boolean moveRelative(long counts, long ticks);
   long getPosition();
   
-//  boolean busy();    //< TRUE if stepper is moving
+  boolean isMoving();    //< TRUE if stepper is moving
 };
 
 #endif

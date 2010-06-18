@@ -66,9 +66,11 @@ enum MESSAGE_VALUE_TYPE {
 struct ParameterDefinition {
   const char *name;
   enum PARAMETER param;
-  int num_values; //some parameters may take more than one value: "SET MAX_SPEEX axis speed", for eg.
+  int num_values; //some parameters may take more than one value: "SET MAX_SPEED axis speed", for eg.
 };
 
+
+// TODO: Fill out num_values here?
 struct ParameterDefinition parameters[] = {
   { "MAX_VEL",  P_MAX_VEL       },
   { "ACCEL",    P_ACCEL         },
@@ -76,26 +78,27 @@ struct ParameterDefinition parameters[] = {
   { NULL,       NOT_A_PARAMETER },
 };
 
-    
+
 struct MessageTypeDefinition {
   const char *name;
   enum MESSAGE_TYPE type;  
   enum MESSAGE_VALUE_TYPE *values;
 };
 
-static enum MESSAGE_VALUE_TYPE NO_VALUES[]  = {NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE GO_VALUES[]  = {MT_INTEGER, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE GETPOS_VALUES[]  = {MT_INTEGER, NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE SET_VALUES[] = {MT_PARAM_NAME, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
-static enum MESSAGE_VALUE_TYPE GET_VALUES[] = {MT_PARAM_NAME, MT_INTEGER, NOT_A_VALUE};
+static enum MESSAGE_VALUE_TYPE NO_VALUES[]     = {NOT_A_VALUE};
+static enum MESSAGE_VALUE_TYPE GO_VALUES[]     = {MT_INTEGER, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
+static enum MESSAGE_VALUE_TYPE GETPOS_VALUES[] = {MT_INTEGER, NOT_A_VALUE};
+static enum MESSAGE_VALUE_TYPE SET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
+static enum MESSAGE_VALUE_TYPE GET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, NOT_A_VALUE};
+static enum MESSAGE_VALUE_TYPE HOME_VALUES[]   = {MT_INTEGER, NOT_A_VALUE};
 
 static struct MessageTypeDefinition messages[] = {
-  { "GO",  M_GO         , GO_VALUES  }, //GO axis position time
-  { "GETPOS", M_GETPOS  , GETPOS_VALUES  }, //GO axis position time
-  { "SET", M_SET        , SET_VALUES }, //SET param axis value
-  { "GET", M_GET        , GET_VALUES }, //GET param axis
-  { "HOME",M_HOME       , NO_VALUES  }, //HOME
-  { "STATE",M_STATE     , NO_VALUES  }, //HOME
+  { "GO",     M_GO         , GO_VALUES  },    //GO axis position time
+  { "GETPOS", M_GETPOS     , GETPOS_VALUES }, //GETPOS axis
+  { "SET",    M_SET        , SET_VALUES },    //SET param axis value
+  { "GET",    M_GET        , GET_VALUES },    //GET param axis
+  { "HOME",   M_HOME       , HOME_VALUES  },  //HOME axis
+  { "STATE",  M_STATE      , NO_VALUES  },    //STATE
   { NULL,  NOT_A_MESSAGE, NULL },
 };static CommandHandler cmdHandler;
 
@@ -147,7 +150,6 @@ enum PARAMETER parseParamName( const char *name ) {
 
   return NOT_A_PARAMETER;
 }
-
 
 //pre: msg->type is the type of message in cmd
 //post: msg->fields is filled in or non-zero is returned
