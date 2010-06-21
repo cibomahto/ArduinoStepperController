@@ -4,6 +4,7 @@
 
 void handler( CommandInterpreter::Message *msg );
 
+#define statusLED 13
 
 // These are the locations of the stepper drivers, using Matts Pololu breakout shield:
 // http://www.cibomahto.com/2010/06/one-shield-to-fit-them-all-and-in-the-darkness-bind-them/
@@ -37,8 +38,6 @@ void handler( CommandInterpreter::Message *msg ) {
       break;
   }
 }
-
-
 
 
 void handleGO(uint8_t axis, long position, long time) {
@@ -89,6 +88,9 @@ void handleSTATE() {
 }
 
 void setup() {
+  pinMode(statusLED, OUTPUT);
+
+
   Stepper::setup(0);
 
   // TODO: Move this to stepper
@@ -111,12 +113,11 @@ void setup() {
 
   // Setup the command handler function
   commander.begin(9600);
-  
-//  commander.setCommandHandler( handler );
+
+  digitalWrite(statusLED, true);
 }
 
-void loop() {
-  
+
+void loop() {  
   commander.checkSerialInput();
-  
 }

@@ -85,6 +85,9 @@ boolean Stepper::moveRelative(long counts, long ticks) {
   if (counts == 0) {
     return true;
   }
+
+  // TODO: Fix this, to allow speed adjustment
+  ticks = counts;
   
   if (counts > ticks || ticks == 0) {
     return false;

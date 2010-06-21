@@ -1,3 +1,44 @@
+
+import time
+
+
+def getMessage(ser):
+    timeoutTime = time.time() + 10
+    gotAckAlive = False
+    message = ""
+    while ( time.time() < timeoutTime and gotAckAlive == False ):
+        message += ser.read()
+        if ( message.endswith("\n") ):
+            gotAckAlive = True
+
+    if ( gotAckAlive == False ):
+        return "Error"
+
+    return message
+    
+def flushSerial(ser):
+    """ Bring the stepper motor controller serial interface to a known state """
+
+    # First, write a newline to flush out anything that was in stepper's
+    # receive buffer
+    ser.write("\n")
+
+    # Then, send an ALIVE message to be sure we are talking to something
+    ser.write("ALIVE\n")
+
+    # Keep reading data until we get a newline, or time out after 10 seconds
+    timeoutTime = time.time() + 10
+    gotAckAlive = False
+    message = ""
+    while ( time.time() < timeoutTime and gotAckAlive == False ):
+        message += ser.read()
+        if ( message.endswith("ACK ALIVE\n") ):
+            gotAckAlive = True
+
+    if ( gotAckAlive == False ):
+        self.fail("timeout waiting for response from stepper")
+
+
 class stepperAxis:
     def __init__(self, axis):
         self.axis = axis
@@ -18,3 +59,13 @@ class stepperAxis:
 
     def getPosition(self):
         return self.currentPosition
+
+    def readPosition(self, ser):
+        flushSerial(ser)
+        ser.write("GETPOS " + str(self.axis) + "\n");
+
+        message = getMessage(ser)
+
+        if ( message[:12] == "ACK GETPOS " + str(self.axis) ):
+            self.currentPosition = int(message[13:])
+

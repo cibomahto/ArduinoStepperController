@@ -41,6 +41,7 @@ class StepperTest(wx.App):
     def OnConnect(self, event):
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         print "Connected!"
+        self.stepperX.readPosition(self.ser)
 
     def OnDisconnect(self, event):
         self.ser.close()
