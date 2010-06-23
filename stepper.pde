@@ -1,9 +1,13 @@
 #include "stepper.h"
 
+#define signalPin 2
+
 // This function is called when timer2 overflows
-ISR(TIMER2_OVF_vect)
+ISR(TIMER2_COMPA_vect)
 { 
+  digitalWrite(signalPin, HIGH);
   Stepper::doStepperInterrupts();
+  digitalWrite(signalPin, LOW);
 }
 
 
@@ -13,6 +17,8 @@ unsigned int Stepper::frequency = 0;
 Stepper* registeredSteppers[MAX_STEPPERS];
 
 void Stepper::setup(unsigned int frequency_) {
+  
+  pinMode(signalPin, OUTPUT);
 
   // TODO: actually set up the timer using the given frequency
   
@@ -156,6 +162,14 @@ long Stepper::getPosition() {
   return position;
 }
 
+boolean Stepper::setPosition(long position_) {
+  if (moving) {
+    return false;
+  }
+   
+  position = position_;
+  return true;
+}
 
 boolean Stepper::isMoving() {
   return moving;

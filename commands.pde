@@ -5,21 +5,15 @@
  * 
  * GO axis position time
  * ACK GO axis position time
- * DONE
+ * DONE axis
  * 
  * GO Tells the controller to move AXIS to POSITION taking TIME miliseconds to get there
  * ACK is sent by the controller immediately after GO recvd.  POSITION and TIME may be modified if POSITION was out of range or TIME was too short.
- * DONE is sent when the move completes
- * 
- * GETPOS AXIS
- * ACK GETPOS AXIS position
- * 
- * GETPOS requests the current position of AXIS from the controller
- * ACK GETPOS is sent by the controller in response and include the current position of that axis
+ * NOTICE DONE is sent when the move completes
  * 
  * SET param value
  * ACK SET param value
- * Sets PARAM to VALUE.  Valid PARAMs are: MAX_VELOCITY, MAX_ACCEL, MAX_POS, MIN_POS, ZERO_OFFSET
+ * Sets PARAM to VALUE.  Valid PARAMs are: VERSION, INDEX, MAX_VELOCITY, ACCEL, POS
  * 
  * GET param value
  * ACK GET param value
@@ -27,7 +21,7 @@
  * 
  * HOME axis
  * ACK HOME axis
- * DONE
+ * NOTICE DONE axis
  * Executes homing procedure for the specified AXIS.  DONE is sent when homing completes.
  * 
  * STATE
@@ -55,44 +49,19 @@
 
 #include <HardwareSerial.h>
 
-enum MESSAGE_VALUE_TYPE {
-  MT_INTEGER,
-  MT_PARAM_NAME,
-  NOT_A_VALUE,
-};
-
-struct ParameterDefinition {
-  const char *name;
-  PARAMETER param;
-  int num_values; //some parameters may take more than one value: "SET MAX_SPEED axis speed", for eg.
-};
-
-
 // TODO: Fill out num_values here?
-struct ParameterDefinition parameters[] = {
-  { "MAX_VEL",  P_MAX_VEL       },
-  { "ACCEL",    P_ACCEL         },
-  { "POS",      P_POS           }, //read only
+CommandInterpreter::ParameterDefinition CommandInterpreter::parameterTypes[] = {
+  { "VERSION",  P_VERSION,      false },    // Interface version (read only)
+  { "INDEX",    P_INDEX,        false },    // Programmable device name for this specific board
+  { "MAX_VEL",  P_MAX_VEL,      true },
+  { "ACCEL",    P_ACCEL,        true },
+  { "POS",      P_POS,          true },
   { NULL,       NOT_A_PARAMETER },
 };
 
 
-struct MessageTypeDefinition {
-  const char *name;
-  MESSAGE_TYPE type;  
-  enum MESSAGE_VALUE_TYPE *values;
-};
-
-static MESSAGE_VALUE_TYPE NO_VALUES[]     = {NOT_A_VALUE};
-static MESSAGE_VALUE_TYPE GO_VALUES[]     = {MT_INTEGER, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
-static MESSAGE_VALUE_TYPE GETPOS_VALUES[] = {MT_INTEGER, NOT_A_VALUE};
-static MESSAGE_VALUE_TYPE SET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
-static MESSAGE_VALUE_TYPE GET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, NOT_A_VALUE};
-static MESSAGE_VALUE_TYPE HOME_VALUES[]   = {MT_INTEGER, NOT_A_VALUE};
-
-static MessageTypeDefinition messages[] = {
+CommandInterpreter::MessageTypeDefinition CommandInterpreter::messageTypes[] = {
   { "GO",     M_GO         , GO_VALUES  },    // GO axis position time
-  { "GETPOS", M_GETPOS     , GETPOS_VALUES }, // GETPOS axis
   { "SET",    M_SET        , SET_VALUES },    // SET param axis value
   { "GET",    M_GET        , GET_VALUES },    // GET param axis
   { "HOME",   M_HOME       , HOME_VALUES  },  // HOME axis
@@ -101,9 +70,15 @@ static MessageTypeDefinition messages[] = {
   { NULL,  NOT_A_MESSAGE, NULL },
 };
 
+CommandInterpreter::MESSAGE_VALUE_TYPE CommandInterpreter::NO_VALUES[]     = {NOT_A_VALUE};
+CommandInterpreter::MESSAGE_VALUE_TYPE CommandInterpreter::GO_VALUES[]     = {MT_INTEGER, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
+CommandInterpreter::MESSAGE_VALUE_TYPE CommandInterpreter::SET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, MT_INTEGER, NOT_A_VALUE};
+CommandInterpreter::MESSAGE_VALUE_TYPE CommandInterpreter::GET_VALUES[]    = {MT_PARAM_NAME, MT_INTEGER, NOT_A_VALUE};
+CommandInterpreter::MESSAGE_VALUE_TYPE CommandInterpreter::HOME_VALUES[]   = {MT_INTEGER, NOT_A_VALUE};
+
 
 CommandInterpreter::CommandInterpreter(CommandHandler handler) : 
-  cmdBufIdx(0),
+  commandBufIdx(0),
   cmdHandler(handler)
 {
 }
@@ -132,11 +107,11 @@ void CommandInterpreter::sendACK( const char* message ) {
 //sets msg->type and msg->typeDefIdx
 int CommandInterpreter::parseCmdType( const char *cmd, Message *msg ) {
   int i=0;
-  while( messages[i].name != NULL ) {
-    if( strncmp( cmd, messages[i].name, strlen(messages[i].name) ) == 0 ) {
-      msg->type = messages[i].type;
+  while( messageTypes[i].name != NULL ) {
+    if( strncmp( cmd, messageTypes[i].name, strlen(messageTypes[i].name) ) == 0 ) {
+      msg->type = messageTypes[i].type;
       msg->typeDefIdx = i;
-      return strlen(messages[i].name);
+      return strlen(messageTypes[i].name);
     }
     i++;
   }
@@ -146,12 +121,14 @@ int CommandInterpreter::parseCmdType( const char *cmd, Message *msg ) {
   return -1;
 }
 
-
-PARAMETER CommandInterpreter::parseParamName( const char *name ) {
+// TODO: Make this signature match with parseCmdType()
+PARAMETER CommandInterpreter::parseParamName( const char *name, boolean& requiresAxis ) {
   int i=0;
-  while( parameters[i].name != NULL ) {
-    if( strcmp( name, parameters[i].name ) == 0 ) {
-      return parameters[i].param;
+  while( parameterTypes[i].name != NULL ) {
+    if( strncmp( name, parameterTypes[i].name, sizeof(parameterTypes[i].name)) == 0 ) {
+      
+      requiresAxis = parameterTypes[i].requiresAxis;
+      return parameterTypes[i].param;
     }
     i++;
   }
@@ -165,27 +142,52 @@ boolean CommandInterpreter::parseMessageValues( const char *str, Message *msg ) 
   int strIdx = 0;
   int valIdx = 0;
  
-  MessageTypeDefinition *mt = &messages[msg->typeDefIdx];
+  // Look up the type of message we are dealing with, so we know what set of inputs to
+  // look for (integers, parameter names, etc)
+  MessageTypeDefinition *mt = &messageTypes[msg->typeDefIdx];
   
+  // While we are still expecting more input
   while( mt->values[valIdx] != NOT_A_VALUE ) {
     //advance past leading whitespace
     while( isspace( str[strIdx]) && str[strIdx] != 0 )  strIdx++;
-
+    
     switch( mt->values[valIdx] ) {
-    case MT_INTEGER:
-      if( 1 != sscanf( str + strIdx, "%ld", &msg->fields[valIdx] ) )
-	goto PARSE_ERROR;
-      break;
-    case MT_PARAM_NAME:
-      if( 1 != sscanf( str + strIdx, "%s", paramBuf ) ) goto PARSE_ERROR;
-      if( NOT_A_PARAMETER == (msg->fields[valIdx] = parseParamName( paramBuf )))
-	goto PARSE_ERROR;
-      break;
-    }
+      // If it is an integer, read it in as a signed long
+      case MT_INTEGER:
+        if( 1 != sscanf( str + strIdx, "%ld", &msg->fields[valIdx] ) )
+          goto PARSE_ERROR;
+        break;
+      // If it is a parameter name, read it in as a string
+      case MT_PARAM_NAME:
+        if( 1 != sscanf( str + strIdx, "%s", paramBuf ) ) goto PARSE_ERROR;
 
-    //advance to the next token
+        // This is true if the parameter doesn't require an axis, and causes the state machine
+        // to skip the following parameter in the MESSAGE_VALUE_TYPE list
+        boolean requiresAxis;
+        
+        // TODO: Don't copy this string, send a pointer to parseParamName
+        // Then attempt to find it in the parameter list
+        
+        msg->fields[valIdx] = parseParamName( paramBuf, requiresAxis );
+        
+        if( msg->fields[valIdx] == NOT_A_PARAMETER)
+          goto PARSE_ERROR;
+          
+        // If we got a parameter that did not require an axis specification,
+        // skip an input
+        if ( !requiresAxis ) {
+          valIdx ++;
+        }
+        
+        break;
+    }
+    
+    // Advance to the next whitespace separator
     while( !isspace(str[strIdx] ) ) strIdx++;
+      
+    // Then advance to the next value
     valIdx++;
+
   }
 
   return true;
@@ -200,15 +202,15 @@ boolean CommandInterpreter::parseMessageValues( const char *str, Message *msg ) 
 //pre: cmd has a null terminated string ending in newline
 //post: msg contains the new command
 //return: 0 if a valid message was read, non-zero on error
-boolean CommandInterpreter::processCommand( const char *cmd, Message *msg ) {
-  int cmdIdx = 0;
-  cmdIdx += parseCmdType( cmd, msg );
+boolean CommandInterpreter::processCommand( const char *command, Message *msg ) {
+  int commandIdx = 0;
+  commandIdx += parseCmdType( command, msg );
 
   if( msg->type == NOT_A_MESSAGE ) {
     return false;
   }
 
-  return parseMessageValues( cmd + cmdIdx, msg );
+  return parseMessageValues( command + commandIdx, msg );
 }
 
 
@@ -217,29 +219,29 @@ void CommandInterpreter::checkSerialInput() {
   
   if( !Serial.available() ) return;
   
-  cmdBuf[cmdBufIdx++] = Serial.read();
-  cmdBuf[cmdBufIdx  ] = 0;
+  commandBuf[commandBufIdx++] = Serial.read();
+  commandBuf[commandBufIdx  ] = 0;
 
-  if( cmdBuf[cmdBufIdx-1] == '\n' ) {
-    if( !processCommand( cmdBuf, &staticMsg ) ) {
-      cmdBufIdx = 0;
+  if( commandBuf[commandBufIdx-1] == '\n' ) {
+    if( !processCommand( commandBuf, &staticMsg ) ) {
+      commandBufIdx = 0;
       return;
     }
     if( staticMsg.type == M_ALIVE ) {
       sendACK( "ALIVE" );
-      cmdBufIdx = 0;
+      commandBufIdx = 0;
     }
     if( handler == NULL ) {
       sendERROR( "No way to parse messages!" );
-      cmdBufIdx = 0;
+      commandBufIdx = 0;
       return;
     }
     handler( &staticMsg );
-    cmdBufIdx = 0;
+    commandBufIdx = 0;
   }
   
-  else if( cmdBufIdx == CMD_BUF_LEN ) {
-    cmdBufIdx = 0;
+  else if( commandBufIdx == CMD_BUF_LEN ) {
+    commandBufIdx = 0;
     sendERROR( "message too long" );
     return;
   }

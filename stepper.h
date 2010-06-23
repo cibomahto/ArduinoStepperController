@@ -29,7 +29,6 @@ class Stepper {
   uint8_t resetPin;
   uint8_t stepPin;
   uint8_t directionPin;
-  
 
   boolean moving;    //< Whether we are running or not
   
@@ -53,7 +52,12 @@ class Stepper {
   // newPosition Steps to take, in stepper counts
   // ticks       Time it should take to move, in terms of interrupt calls
   boolean moveRelative(long counts, long ticks);
+  
+  // Get the position
   long getPosition();
+  
+  // Reset the position, only works if the stepper is not in motion
+  boolean setPosition(long position_);
   
   boolean isMoving();    //< TRUE if stepper is moving
 };
