@@ -253,19 +253,22 @@ class GOtests(controllerTest):
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testMoves(self):
+        counts = 400
+        timeDelay = 1000
+
         """ For each axis, jog it forward a bit, then backward """
         for i in range(0, controllerAxisCount):
             # Move the axis
-            ser.write("GO " + str(i) + " 5000 5000\n")
+            ser.write("GO " + str(i) + " " + str(counts) + " " + str(timeDelay) + "\n")
             response = ser.readline()
-            self.assertEqual(response, "ACK GO " + str(i) + " 5000 5000\n")
+            self.assertEqual(response, "ACK GO " + str(i) + " " + str(counts) + " " + str(timeDelay) + "\n")
             
             # For kicks, check that the state is being reported correctly
             ser.write("STATE\n")
             response = ser.readline()
             self.assertEqual(response, "ACK STATE GOING\n")
 
-            time.sleep(2)
+            time.sleep(timeDelay/1000)
 
             response = ser.readline()
             self.assertEqual(response, "NOTICE DONE " + str(i) + "\n")
@@ -277,19 +280,19 @@ class GOtests(controllerTest):
             # Check that it got there
             ser.write("GET POS " + str(i) + "\n")
             response = ser.readline()
-            self.assertEqual(response, "ACK GET POS " + str(i) + " 5000\n")
+            self.assertEqual(response, "ACK GET POS " + str(i) + " " + str(counts) + "\n")
 
             # Then move it back
-            ser.write("GO " + str(i) + " 0 5000\n")
+            ser.write("GO " + str(i) + " 0 " + str(timeDelay) + "\n")
             response = ser.readline()
-            self.assertEqual(response, "ACK GO " + str(i) + " 0 5000\n")
+            self.assertEqual(response, "ACK GO " + str(i) + " 0 " + str(timeDelay) + "\n")
 
             # For kicks, check that the state is being reported correctly
             ser.write("STATE\n")
             response = ser.readline()
             self.assertEqual(response, "ACK STATE GOING\n")
 
-            time.sleep(2)
+            time.sleep(timeDelay/1000)
 
             response = ser.readline()
             self.assertEqual(response, "NOTICE DONE " + str(i) + "\n")
@@ -349,8 +352,8 @@ if __name__ == '__main__':
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(SETtests))
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(HOMEtests))
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(STATEtests))
-#    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(GOtests))
-#    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(FUZZtests))
+    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(GOtests))
+    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(FUZZtests))
 
     unittest.TextTestRunner(verbosity=2).run(suite)
 

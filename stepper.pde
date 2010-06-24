@@ -1,4 +1,5 @@
 #include "stepper.h"
+#include "EEPROM_templates.h"
 
 #define signalPin 2
 
@@ -51,7 +52,25 @@ Stepper& Stepper::getStepper(const int index) {
   // if ( index < 0 || index >= stepperCount )
   return *registeredSteppers[index];
 }
+
+int Stepper::saveSettings(int offset) {
+  int size = 0;
   
+  for (uint8_t i = 0; i < stepperCount; i++) {
+    size += EEPROM_writeAnything(offset + size, registeredSteppers[i]->settings);
+  }
+  
+  return size;
+}
+int Stepper::restoreSettings(int offset) {
+  int size = 0;
+  
+  for (uint8_t i = 0; i < stepperCount; i++) {
+    size += EEPROM_readAnything(offset + size, registeredSteppers[i]->settings);
+  }
+  
+  return size;
+}
 
 Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) :
   resetPin(resetPin_),
@@ -67,6 +86,8 @@ Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) :
   registerStepper(this);
 }
 
+
+
 void Stepper::doReset() {
   moving = false;
   finished = false;
@@ -80,28 +101,33 @@ void Stepper::doReset() {
   digitalWrite(resetPin, HIGH);
 }
 
-boolean Stepper::moveAbsolute(long newPosition, long ticks) {
-  return moveRelative(newPosition - position, ticks);
+boolean Stepper::moveAbsolute(long newPosition, long& time) {
+  return moveRelative(newPosition - position, time);
 }
 
-boolean Stepper::moveRelative(long counts, long ticks) {
+boolean Stepper::moveRelative(long steps, long& time) {
+  long frequency = 10000;  // Frequency, in Hz
+  long ticks;
   
   if ( moving ) {
     return false;
   }
 
-  if (counts == 0) {
+  if (steps == 0) {
     return true;
   }
-
-  // TODO: Fix this, to allow speed adjustment
-  ticks = abs(counts);
   
-  if (counts > ticks || ticks == 0) {
-    return false;
+  // If the requested speed is too fast, set it to a speed we can achieve
+  if ( time <= 0 ||
+       ((float)abs(steps) / time ) * 1000 > settings.maxVelocity ) {
+    time = ((float)abs(steps) * 1000) / settings.maxVelocity;
   }
   
-  if ( counts > 0) {
+  // Calculate how many ticks the operation should last
+  // ticks(steps) = frequency (steps/s) * time (ms) / 1000 (s/ms)
+  ticks = (float)frequency * time / 1000;
+  
+  if ( steps > 0) {
     digitalWrite(directionPin, HIGH);
     direction = 1;
   }
@@ -110,10 +136,10 @@ boolean Stepper::moveRelative(long counts, long ticks) {
     direction = -1;
   }
 
-  countsLeft = abs(counts);
+  stepsLeft = abs(steps);
 
   deltax = ticks;
-  deltay = abs(counts);  
+  deltay = abs(steps);
   error = deltax / 2;
   
   moving = true;
@@ -148,11 +174,11 @@ void Stepper::doInterrupt() {
   
       // Update counters
       position += direction;
-      countsLeft--;
+      stepsLeft--;
       
       error = error + deltax;
       
-      if (countsLeft == 0) {
+      if (stepsLeft == 0) {
         moving = false;
         finished = true;
       } 
@@ -175,7 +201,7 @@ boolean Stepper::setPosition(long position_) {
 }
 
 long Stepper::getMaxVelocity() {
-  return maxVelocity;
+  return settings.maxVelocity;
 }
 
 boolean Stepper::setMaxVelocity(long velocity_) {
@@ -183,12 +209,12 @@ boolean Stepper::setMaxVelocity(long velocity_) {
     return false;
   }
    
-  maxVelocity = velocity_;
+  settings.maxVelocity = velocity_;
   return true;
 }
 
 long Stepper::getAcceleration() {
-  return acceleration;
+  return settings.acceleration;
 }
 
 boolean Stepper::setAcceleration(long acceleration_) {
@@ -196,7 +222,7 @@ boolean Stepper::setAcceleration(long acceleration_) {
     return false;
   }
    
-  acceleration = acceleration_;
+  settings.acceleration = acceleration_;
   return true;
 }
 
@@ -210,6 +236,6 @@ boolean Stepper::checkFinished() {
 }
 
 boolean Stepper::busy() {
-  return moving | finished;
+  return moving;
 }
 

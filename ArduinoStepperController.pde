@@ -98,7 +98,7 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
       break;
     case P_ACCEL:
      {
-      long acceleration = Stepper::getStepper(axis).getPosition();
+      long acceleration = Stepper::getStepper(axis).getAcceleration();
       sprintf(buffer, "GET ACCEL %d %ld", axis, acceleration);
       good = true;
      }
@@ -145,6 +145,7 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
       good = Stepper::getStepper(value1).setMaxVelocity(value2);
       
       if ( good ) {
+        saveSettings();
         sprintf(buffer, "SET MAX_VEL %ld %ld", value1, value2);
       }
       break;
@@ -156,6 +157,7 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
       good = Stepper::getStepper(value1).setAcceleration(value2);
       
       if ( good ) {
+        saveSettings();
         sprintf(buffer, "SET ACCEL %ld %ld", value1, value2);
       }
       break;
@@ -217,15 +219,19 @@ void restoreSettings() {
     settings.index = 0;
 
     saveSettings();
+    offset += Stepper::saveSettings(offset);
   }
   else {
     // TODO: restore settings for the steppers
+    offset += Stepper::restoreSettings(offset);
   }
 }
 
 void saveSettings() {
   int offset = 0;
   offset += EEPROM_writeAnything(eepromLocation, settings);
+  
+  offset += Stepper::saveSettings(offset);
 
   // TODO: write settings from the steppers
 }

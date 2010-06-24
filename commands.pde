@@ -111,19 +111,19 @@ void CommandInterpreter::sendNOTICE( const char* message ) {
 
 //returns the index of the character after the last charater in the message type or -1
 //sets msg->type and msg->typeDefIdx
-int CommandInterpreter::parseCmdType( const char *cmd, Message *msg ) {
+int CommandInterpreter::parseCmdType( const char *cmd, Message& msg ) {
   int i=0;
   while( messageTypes[i].name != NULL ) {
     if( strncmp( cmd, messageTypes[i].name, strlen(messageTypes[i].name) ) == 0 ) {
-      msg->type = messageTypes[i].type;
-      msg->typeDefIdx = i;
+      msg.type = messageTypes[i].type;
+      msg.typeDefIdx = i;
       return strlen(messageTypes[i].name);
     }
     i++;
   }
  
   sendERROR( "message had unknown prefix" );
-  msg->type = NOT_A_MESSAGE;
+  msg.type = NOT_A_MESSAGE;
   return -1;
 }
 
@@ -144,23 +144,23 @@ PARAMETER CommandInterpreter::parseParamName( const char *name, boolean& require
 
 //pre: msg->type is the type of message in cmd
 //post: msg->fields is filled in or non-zero is returned
-boolean CommandInterpreter::parseMessageValues( const char *str, Message *msg ) {
+boolean CommandInterpreter::parseMessageValues( const char *str, Message& msg ) {
   int strIdx = 0;
   int valIdx = 0;
  
   // Look up the type of message we are dealing with, so we know what set of inputs to
   // look for (integers, parameter names, etc)
-  MessageTypeDefinition *mt = &messageTypes[msg->typeDefIdx];
+  MessageTypeDefinition& mt = messageTypes[msg.typeDefIdx];
   
   // While we are still expecting more input
-  while( mt->values[valIdx] != NOT_A_VALUE ) {
+  while( mt.values[valIdx] != NOT_A_VALUE ) {
     //advance past leading whitespace
     while( isspace( str[strIdx]) && str[strIdx] != 0 )  strIdx++;
     
-    switch( mt->values[valIdx] ) {
+    switch( mt.values[valIdx] ) {
       // If it is an integer, read it in as a signed long
       case MT_INTEGER:
-        if( 1 != sscanf( str + strIdx, "%ld", &msg->fields[valIdx] ) )
+        if( 1 != sscanf( str + strIdx, "%ld", &msg.fields[valIdx] ) )
           goto PARSE_ERROR;
         break;
       // If it is a parameter name, read it in as a string
@@ -174,9 +174,9 @@ boolean CommandInterpreter::parseMessageValues( const char *str, Message *msg ) 
         // TODO: Don't copy this string, send a pointer to parseParamName
         // Then attempt to find it in the parameter list
         
-        msg->fields[valIdx] = parseParamName( paramBuf, requiresAxis );
+        msg.fields[valIdx] = parseParamName( paramBuf, requiresAxis );
         
-        if( msg->fields[valIdx] == NOT_A_PARAMETER)
+        if( msg.fields[valIdx] == NOT_A_PARAMETER)
           goto PARSE_ERROR;
           
         // If we got a parameter that did not require an axis specification,
@@ -200,7 +200,7 @@ boolean CommandInterpreter::parseMessageValues( const char *str, Message *msg ) 
 
  PARSE_ERROR: 
   sendERROR( "message arguments did not parse" );
-  msg->type = NOT_A_MESSAGE;
+  msg.type = NOT_A_MESSAGE;
   return false;
 }
 
@@ -208,11 +208,11 @@ boolean CommandInterpreter::parseMessageValues( const char *str, Message *msg ) 
 //pre: cmd has a null terminated string ending in newline
 //post: msg contains the new command
 //return: 0 if a valid message was read, non-zero on error
-boolean CommandInterpreter::processCommand( const char *command, Message *msg ) {
+boolean CommandInterpreter::processCommand( const char* command, Message& msg ) {
   int commandIdx = 0;
   commandIdx += parseCmdType( command, msg );
 
-  if( msg->type == NOT_A_MESSAGE ) {
+  if( msg.type == NOT_A_MESSAGE ) {
     return false;
   }
 
@@ -229,7 +229,7 @@ void CommandInterpreter::checkSerialInput() {
   commandBuf[commandBufIdx  ] = 0;
 
   if( commandBuf[commandBufIdx-1] == '\n' ) {
-    if( !processCommand( commandBuf, &staticMsg ) ) {
+    if( !processCommand( commandBuf, staticMsg ) ) {
       commandBufIdx = 0;
       return;
     }

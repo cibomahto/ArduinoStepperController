@@ -75,15 +75,15 @@ class CommandInterpreter {
   static MessageTypeDefinition messageTypes[];
   static ParameterDefinition parameterTypes[];
  
-  boolean processCommand( const char *cmd, Message *msg );
+  boolean processCommand( const char *cmd, Message& msg );
   
   void sendReply( const char *str );
   
-  int parseCmdType( const char *cmd, Message *msg );
+  int parseCmdType( const char *cmd, Message& msg );
   
   PARAMETER parseParamName( const char *name, boolean& requiresAxis );
   
-  boolean parseMessageValues( const char *str, Message *msg );
+  boolean parseMessageValues( const char *str, Message& msg );
     
   char commandBuf[CMD_BUF_LEN+1];
   char paramBuf[CMD_BUF_LEN+1];
