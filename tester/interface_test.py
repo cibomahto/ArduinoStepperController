@@ -60,12 +60,30 @@ class GETtests(controllerTest):
         ser.write("GET INDEX\n");
         response = ser.readline()
         self.assertEqual(response[:14], "ACK GET INDEX ")
-    def testMaxVelocityFails(self):
-        ser.write("GET MAX_VEL 0\n")
+    def testMaxVelocityValid(self):
+        for i in range(0, controllerAxisCount):
+            ser.write("GET MAX_VEL " + str(i) + "\n")
+            response = ser.readline()
+            self.assertEqual(response[:18], "ACK GET MAX_VEL " + str(i) + " ")
+    def testMaxVelNegativeAxis(self):
+        ser.write("GET MAX_VEL -1\n")
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
-    def testAccelFails(self):
-        ser.write("GET ACCEL 0\n")
+    def testMaxVelOutOfBoundsAxis(self):
+        ser.write("GET MAX_VEL " + str(controllerAxisCount) + "\n")
+        response = ser.readline()
+        self.assertTrue(response.startswith("ERROR "))
+    def testAccelValid(self):
+        for i in range(0, controllerAxisCount):
+            ser.write("GET ACCEL " + str(i) + "\n")
+            response = ser.readline()
+            self.assertEqual(response[:16], "ACK GET ACCEL " + str(i) + " ")
+    def testAccelNegativeAxis(self):
+        ser.write("GET ACCEL -1\n")
+        response = ser.readline()
+        self.assertTrue(response.startswith("ERROR "))
+    def testAccelOutOfBoundsAxis(self):
+        ser.write("GET ACCEL " + str(controllerAxisCount) + "\n")
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testPosValid(self):
@@ -121,14 +139,75 @@ class SETtests(controllerTest):
         ser.write("GET INDEX\n");
         response = ser.readline()
         self.assertTrue(response.startswith("ACK GET INDEX " + str(originalIndex)))
-    def testMaxVelocityFails(self):
-        ser.write("SET MAX_VEL 0 0\n")
-        response = ser.readline()
-        self.assertTrue(response.startswith("ERROR "))
-    def testAccelFails(self):
-        ser.write("SET ACCEL 0 0\n")
-        response = ser.readline()
-        self.assertTrue(response.startswith("ERROR "))
+    def testSetPos(self):
+        for i in range(0, controllerAxisCount):
+            # Read in the existing position, overwrite it, test that worked, then
+            # restore the original
+            ser.write("GET POS " + str(i) + "\n")
+            response = ser.readline()
+            self.assertEqual(response[:14], "ACK GET POS " + str(i) + " ")
+            originalIndex = long(response[14:])
+            ser.write("SET POS " + str(i) + " " + str(originalIndex + 1) + "\n")
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK SET POS " + str(i) + " " + str(originalIndex + 1)))
+
+            ser.write("GET POS " + str(i) + "\n");
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK GET POS " + str(i) + " " + str(originalIndex + 1)))
+
+            ser.write("SET POS " + str(i) + " " + str(originalIndex) + "\n")
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK SET POS " + str(i) + " " + str(originalIndex)))
+
+            ser.write("GET POS " + str(i) + "\n" );
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK GET POS " + str(i) + " " + str(originalIndex)))
+    def testMaxVelocity(self):
+        for i in range(0, controllerAxisCount):
+            # Read in the existing position, overwrite it, test that worked, then
+            # restore the original
+            ser.write("GET MAX_VEL " + str(i) + "\n")
+            response = ser.readline()
+            self.assertEqual(response[:18], "ACK GET MAX_VEL " + str(i) + " ")
+            originalIndex = long(response[18:])
+            ser.write("SET MAX_VEL " + str(i) + " " + str(originalIndex + 1) + "\n")
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK SET MAX_VEL " + str(i) + " " + str(originalIndex + 1)))
+
+            ser.write("GET MAX_VEL " + str(i) + "\n");
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK GET MAX_VEL " + str(i) + " " + str(originalIndex + 1)))
+
+            ser.write("SET MAX_VEL " + str(i) + " " + str(originalIndex) + "\n")
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK SET MAX_VEL " + str(i) + " " + str(originalIndex)))
+
+            ser.write("GET MAX_VEL " + str(i) + "\n" );
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK GET MAX_VEL " + str(i) + " " + str(originalIndex)))
+    def testAccel(self):
+        for i in range(0, controllerAxisCount):
+            # Read in the existing position, overwrite it, test that worked, then
+            # restore the original
+            ser.write("GET ACCEL " + str(i) + "\n")
+            response = ser.readline()
+            self.assertEqual(response[:16], "ACK GET ACCEL " + str(i) + " ")
+            originalIndex = long(response[16:])
+            ser.write("SET ACCEL " + str(i) + " " + str(originalIndex + 1) + "\n")
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK SET ACCEL " + str(i) + " " + str(originalIndex + 1)))
+
+            ser.write("GET ACCEL " + str(i) + "\n");
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK GET ACCEL " + str(i) + " " + str(originalIndex + 1)))
+
+            ser.write("SET ACCEL " + str(i) + " " + str(originalIndex) + "\n")
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK SET ACCEL " + str(i) + " " + str(originalIndex)))
+
+            ser.write("GET ACCEL " + str(i) + "\n" );
+            response = ser.readline()
+            self.assertTrue(response.startswith("ACK GET ACCEL " + str(i) + " " + str(originalIndex)))
 
 class HOMEtests(controllerTest):
     """ HOME not currently supported """
@@ -270,8 +349,8 @@ if __name__ == '__main__':
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(SETtests))
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(HOMEtests))
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(STATEtests))
-    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(GOtests))
-    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(FUZZtests))
+#    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(GOtests))
+#    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(FUZZtests))
 
     unittest.TextTestRunner(verbosity=2).run(suite)
 

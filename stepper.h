@@ -38,11 +38,17 @@ class Stepper {
   
   // Get the position
   long getPosition();
+
+  long getMaxVelocity();
+  boolean setMaxVelocity(long velocity_);
+
+  long getAcceleration();
+  boolean setAcceleration(long acceleration_);
   
   // Reset the position, only works if the stepper is not in motion
   boolean setPosition(long position_);
   
-  boolean isMoving();    //< TRUE if stepper is moving
+  boolean busy();    //< TRUE if stepper is moving
   
   boolean checkFinished();  //< TRUE if the device just finished moving. Clears the
                             //< finished bit if set.
@@ -54,6 +60,9 @@ class Stepper {
 
   boolean moving;    //< Whether we are running or not
   boolean finished;  //< True if we just finished running
+  
+  long maxVelocity;
+  long acceleration;
   
   long position;      //< Current position
   long countsLeft;    //< Number of counts until final position is reached

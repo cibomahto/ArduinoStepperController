@@ -174,6 +174,32 @@ boolean Stepper::setPosition(long position_) {
   return true;
 }
 
+long Stepper::getMaxVelocity() {
+  return maxVelocity;
+}
+
+boolean Stepper::setMaxVelocity(long velocity_) {
+  if (moving) {
+    return false;
+  }
+   
+  maxVelocity = velocity_;
+  return true;
+}
+
+long Stepper::getAcceleration() {
+  return acceleration;
+}
+
+boolean Stepper::setAcceleration(long acceleration_) {
+  if (moving) {
+    return false;
+  }
+   
+  acceleration = acceleration_;
+  return true;
+}
+
 boolean Stepper::checkFinished() {
   if (finished) {
     finished = false;
@@ -183,7 +209,7 @@ boolean Stepper::checkFinished() {
   return false;
 }
 
-boolean Stepper::isMoving() {
-  return moving;
+boolean Stepper::busy() {
+  return moving | finished;
 }
 

@@ -90,13 +90,25 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
       good = true;
       break;
     case P_MAX_VEL:
+     {
+      long velocity = Stepper::getStepper(axis).getMaxVelocity();
+      sprintf(buffer, "GET MAX_VEL %d %ld", axis, velocity);
+      good = true;
+     }
       break;
     case P_ACCEL:
+     {
+      long acceleration = Stepper::getStepper(axis).getPosition();
+      sprintf(buffer, "GET ACCEL %d %ld", axis, acceleration);
+      good = true;
+     }
       break;
     case P_POS:
+     {
       long position = Stepper::getStepper(axis).getPosition();
       sprintf(buffer, "GET POS %d %ld", axis, position);
       good = true;
+     }
       break;
   }
   
@@ -130,14 +142,22 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
         commander.sendERROR("parameter axis out of bounds");
         return;
       }
+      good = Stepper::getStepper(value1).setMaxVelocity(value2);
       
+      if ( good ) {
+        sprintf(buffer, "SET MAX_VEL %ld %ld", value1, value2);
+      }
       break;
     case P_ACCEL:
       if ( value1 >= Stepper::count() || value1 < 0 ) {
         commander.sendERROR("parameter axis out of bounds");
         return;
       }
+      good = Stepper::getStepper(value1).setAcceleration(value2);
       
+      if ( good ) {
+        sprintf(buffer, "SET ACCEL %ld %ld", value1, value2);
+      }
       break;
     case P_POS:
       if ( value1 >= Stepper::count() || value1 < 0 ) {
@@ -166,15 +186,15 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
 void handleSTATE() {
   // Try to determine the state... we don't support ERROR or HOMING, so it has
   // to be READY or GOING
-  boolean isMoving = false;
+  boolean busy = false;
 
   for ( uint8_t axis = 0; axis < Stepper::count(); axis++) {
-    if (Stepper::getStepper(axis).isMoving()) {
-      isMoving = true;
+    if (Stepper::getStepper(axis).busy()) {
+      busy = true;
     }
   }
   
-  if ( isMoving ) {
+  if ( busy ) {
     commander.sendACK("STATE GOING");
   }
   else {
