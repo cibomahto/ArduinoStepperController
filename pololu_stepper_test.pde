@@ -252,6 +252,15 @@ void setup() {
 }
 
 
+char buff[25];
+
 void loop() {  
   commander.checkSerialInput();
+
+  for ( uint8_t axis = 0; axis < Stepper::count(); axis++) {  
+    if ( Stepper::getStepper(axis).checkFinished() ) {
+      sprintf(buff, "DONE %d", axis);
+      commander.sendNOTICE(buff);
+    }
+  }
 }

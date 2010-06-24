@@ -62,10 +62,10 @@ class stepperAxis:
 
     def readPosition(self, ser):
         flushSerial(ser)
-        ser.write("GETPOS " + str(self.axis) + "\n");
+        ser.write("GET POS " + str(self.axis) + "\n");
 
         message = getMessage(ser)
 
-        if ( message[:12] == "ACK GETPOS " + str(self.axis) ):
+        if ( message[:12] == "ACK GET POS " + str(self.axis) ):
             self.currentPosition = int(message[13:])
 

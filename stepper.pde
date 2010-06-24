@@ -53,12 +53,11 @@ Stepper& Stepper::getStepper(const int index) {
 }
   
 
-Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) {
-  resetPin = resetPin_;
-  stepPin = stepPin_;
-  directionPin = directionPin_;
-  moving = false;
-
+Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) :
+  resetPin(resetPin_),
+  stepPin(stepPin_),
+  directionPin(directionPin_)
+{
   pinMode(resetPin, OUTPUT);
   pinMode(stepPin, OUTPUT);
   pinMode(directionPin, OUTPUT);
@@ -69,6 +68,9 @@ Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) {
 }
 
 void Stepper::doReset() {
+  moving = false;
+  finished = false;
+  
   position = 0;
 
   digitalWrite(directionPin, LOW);
@@ -93,7 +95,7 @@ boolean Stepper::moveRelative(long counts, long ticks) {
   }
 
   // TODO: Fix this, to allow speed adjustment
-  ticks = counts;
+  ticks = abs(counts);
   
   if (counts > ticks || ticks == 0) {
     return false;
@@ -152,6 +154,7 @@ void Stepper::doInterrupt() {
       
       if (countsLeft == 0) {
         moving = false;
+        finished = true;
       } 
     }
   }
@@ -169,6 +172,15 @@ boolean Stepper::setPosition(long position_) {
    
   position = position_;
   return true;
+}
+
+boolean Stepper::checkFinished() {
+  if (finished) {
+    finished = false;
+    return true;
+  }
+  
+  return false;
 }
 
 boolean Stepper::isMoving() {

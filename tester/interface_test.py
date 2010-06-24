@@ -186,7 +186,10 @@ class GOtests(controllerTest):
             response = ser.readline()
             self.assertEqual(response, "ACK STATE GOING\n")
 
-            time.sleep(1)
+            time.sleep(2)
+
+            response = ser.readline()
+            self.assertEqual(response, "NOTICE DONE " + str(i) + "\n")
 
             ser.write("STATE\n")
             response = ser.readline()
@@ -207,7 +210,10 @@ class GOtests(controllerTest):
             response = ser.readline()
             self.assertEqual(response, "ACK STATE GOING\n")
 
-            time.sleep(1)
+            time.sleep(2)
+
+            response = ser.readline()
+            self.assertEqual(response, "NOTICE DONE " + str(i) + "\n")
 
             ser.write("STATE\n")
             response = ser.readline()
