@@ -99,6 +99,12 @@ void Stepper::doReset() {
 
   digitalWrite(resetPin, LOW);
   digitalWrite(resetPin, HIGH);
+
+
+  if ( settings.stopMode == S_DISABLE ) {
+    // TODO: Use enable pin instead of reset pin
+    digitalWrite(resetPin, LOW);
+  }
 }
 
 boolean Stepper::moveAbsolute(long newPosition, long& time) {
@@ -114,6 +120,7 @@ boolean Stepper::moveRelative(long steps, long& time) {
   }
 
   if (steps == 0) {
+    finished = true;
     return true;
   }
   
@@ -141,6 +148,11 @@ boolean Stepper::moveRelative(long steps, long& time) {
   deltax = ticks;
   deltay = abs(steps);
   error = deltax / 2;
+
+  if ( settings.stopMode = S_DISABLE ) {
+    // TODO: Use enable pin instead of reset pin
+    digitalWrite(resetPin, HIGH);
+  }
   
   moving = true;
   
@@ -181,6 +193,11 @@ void Stepper::doInterrupt() {
       if (stepsLeft == 0) {
         moving = false;
         finished = true;
+        
+        if (settings.stopMode = S_DISABLE) {
+          // TODO: Use enable pin instead of reset pin
+          digitalWrite(resetPin, LOW);
+        }
       } 
     }
   }
@@ -223,6 +240,30 @@ boolean Stepper::setAcceleration(long acceleration_) {
   }
    
   settings.acceleration = acceleration_;
+  return true;
+}
+
+STOP_MODES Stepper::getStopMode() {
+  return settings.stopMode;
+}
+
+boolean Stepper::setStopMode(STOP_MODES stopMode_) {
+if (moving) {
+    return false;
+  }
+   
+  settings.stopMode = stopMode_;
+
+  // Update the output if we changed modes
+  switch (settings.stopMode) {
+    case S_DISABLE:
+      digitalWrite(resetPin, LOW);
+      break;
+    case S_KEEP_ENABLED:
+      digitalWrite(resetPin, HIGH);
+      break;
+  }
+  
   return true;
 }
 

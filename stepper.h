@@ -5,6 +5,11 @@
 
 #define MAX_STEPPERS 4
 
+enum STOP_MODES {
+  S_KEEP_ENABLED,
+  S_DISABLE,
+};
+
 class Stepper {
 // Global stepper stuff
  public:  
@@ -48,6 +53,9 @@ class Stepper {
   long getAcceleration();
   boolean setAcceleration(long acceleration_);
   
+  STOP_MODES getStopMode();
+  boolean setStopMode(STOP_MODES stopMode_);
+  
   // Reset the position, only works if the stepper is not in motion
   boolean setPosition(long position_);
   
@@ -61,6 +69,7 @@ class Stepper {
   struct stepperSettings {
     long maxVelocity;
     long acceleration;
+    STOP_MODES stopMode;
   };
   
   stepperSettings settings;

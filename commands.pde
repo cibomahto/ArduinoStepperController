@@ -55,6 +55,7 @@ CommandInterpreter::ParameterDefinition CommandInterpreter::parameterTypes[] = {
   { "INDEX",    P_INDEX,        false },    // Programmable device name for this specific board
   { "MAX_VEL",  P_MAX_VEL,      true },
   { "ACCEL",    P_ACCEL,        true },
+  { "STOP_MODE",P_STOP_MODE,    true },
   { "POS",      P_POS,          true },
   { NULL,       NOT_A_PARAMETER },
 };

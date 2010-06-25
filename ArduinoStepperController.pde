@@ -103,6 +103,14 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
       good = true;
      }
       break;
+    case P_STOP_MODE:
+      // TODO: Add better interface for this
+     {
+      boolean stopmode = Stepper::getStepper(axis).getStopMode();
+      sprintf(buffer, "GET STOP_MODE %d %ld", axis, stopmode);
+      good = true;
+     }
+      break;
     case P_POS:
      {
       long position = Stepper::getStepper(axis).getPosition();
@@ -159,6 +167,19 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
       if ( good ) {
         saveSettings();
         sprintf(buffer, "SET ACCEL %ld %ld", value1, value2);
+      }
+      break;
+    case P_STOP_MODE:
+      if ( value1 >= Stepper::count() || value1 < 0 ) {
+        commander.sendERROR("parameter axis out of bounds");
+        return;
+      }
+      // TODO: Add better interface for this
+      good = Stepper::getStepper(value1).setStopMode((STOP_MODES)value2);
+      
+      if ( good ) {
+        saveSettings();
+        sprintf(buffer, "SET STOP_MODE %ld %ld", value1, value2);
       }
       break;
     case P_POS:

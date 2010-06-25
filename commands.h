@@ -21,7 +21,8 @@ enum PARAMETER {
   P_INDEX,
   P_MAX_VEL,
   P_ACCEL,
-  P_POS, //read only
+  P_STOP_MODE,
+  P_POS,
   NOT_A_PARAMETER,
 };
 
