@@ -61,7 +61,7 @@ class GETtests(controllerTest):
         response = ser.readline()
         self.assertEqual(response[:14], "ACK GET INDEX ")
     def testMaxVelocityValid(self):
-        for i in range(0, controllerAxisCount):
+        for i in range(1, controllerAxisCount + 1):
             ser.write("GET MAX_VEL " + str(i) + "\n")
             response = ser.readline()
             self.assertEqual(response[:18], "ACK GET MAX_VEL " + str(i) + " ")
@@ -70,11 +70,11 @@ class GETtests(controllerTest):
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testMaxVelOutOfBoundsAxis(self):
-        ser.write("GET MAX_VEL " + str(controllerAxisCount) + "\n")
+        ser.write("GET MAX_VEL " + str(controllerAxisCount + 1) + "\n")
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testAccelValid(self):
-        for i in range(0, controllerAxisCount):
+        for i in range(1, controllerAxisCount + 1):
             ser.write("GET ACCEL " + str(i) + "\n")
             response = ser.readline()
             self.assertEqual(response[:16], "ACK GET ACCEL " + str(i) + " ")
@@ -83,11 +83,11 @@ class GETtests(controllerTest):
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testAccelOutOfBoundsAxis(self):
-        ser.write("GET ACCEL " + str(controllerAxisCount) + "\n")
+        ser.write("GET ACCEL " + str(controllerAxisCount + 1) + "\n")
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testPosValid(self):
-        for i in range(0, controllerAxisCount):
+        for i in range(1, controllerAxisCount + 1):
             ser.write("GET POS " + str(i) + "\n")
             response = ser.readline()
             self.assertEqual(response[:14], "ACK GET POS " + str(i) + " ")
@@ -96,7 +96,7 @@ class GETtests(controllerTest):
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testPosOutOfBoundsAxis(self):
-        ser.write("GET POS " + str(controllerAxisCount) + "\n")
+        ser.write("GET POS " + str(controllerAxisCount + 1) + "\n")
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
 
@@ -140,7 +140,7 @@ class SETtests(controllerTest):
         response = ser.readline()
         self.assertTrue(response.startswith("ACK GET INDEX " + str(originalIndex)))
     def testSetPos(self):
-        for i in range(0, controllerAxisCount):
+        for i in range(1, controllerAxisCount + 1):
             # Read in the existing position, overwrite it, test that worked, then
             # restore the original
             ser.write("GET POS " + str(i) + "\n")
@@ -163,7 +163,7 @@ class SETtests(controllerTest):
             response = ser.readline()
             self.assertTrue(response.startswith("ACK GET POS " + str(i) + " " + str(originalIndex)))
     def testMaxVelocity(self):
-        for i in range(0, controllerAxisCount):
+        for i in range(1, controllerAxisCount + 1):
             # Read in the existing position, overwrite it, test that worked, then
             # restore the original
             ser.write("GET MAX_VEL " + str(i) + "\n")
@@ -186,7 +186,7 @@ class SETtests(controllerTest):
             response = ser.readline()
             self.assertTrue(response.startswith("ACK GET MAX_VEL " + str(i) + " " + str(originalIndex)))
     def testAccel(self):
-        for i in range(0, controllerAxisCount):
+        for i in range(1, controllerAxisCount + 1):
             # Read in the existing position, overwrite it, test that worked, then
             # restore the original
             ser.write("GET ACCEL " + str(i) + "\n")
@@ -216,7 +216,7 @@ class HOMEtests(controllerTest):
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testOutOfBoundsAxis(self):
-        ser.write("HOME " + str(controllerAxisCount) + " 0 0\n")
+        ser.write("HOME " + str(controllerAxisCount + 1) + " 0 0\n")
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testIncompleteParams(self):
@@ -245,7 +245,7 @@ class GOtests(controllerTest):
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testOutOfBoundsAxis(self):
-        ser.write("GO " + str(controllerAxisCount) + " 0 0\n")
+        ser.write("GO " + str(controllerAxisCount + 1) + " 0 0\n")
         response = ser.readline()
         self.assertTrue(response.startswith("ERROR "))
     def testIncompleteParams(self):
@@ -257,7 +257,7 @@ class GOtests(controllerTest):
         timeDelay = 1000
 
         """ For each axis, jog it forward a bit, then backward """
-        for i in range(0, controllerAxisCount):
+        for i in range(1, controllerAxisCount + 1):
             # Move the axis
             ser.write("GO " + str(i) + " " + str(counts) + " " + str(timeDelay) + "\n")
             response = ser.readline()

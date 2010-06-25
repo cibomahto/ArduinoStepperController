@@ -1,9 +1,7 @@
-
 #include "commands.h"
 #include "stepper.h"
 #include <EEPROM.h>
 #include "EEPROM_templates.h"
-
 
 void handler( CommandInterpreter::Message *msg );
 
@@ -21,8 +19,6 @@ driverSettings settings;
 
 // This is the version number reported from the GET VERSION command
 const long versionNumber = 1;
-
-
 
 // These are the locations of the stepper drivers, using Matts Pololu breakout shield:
 // http://www.cibomahto.com/2010/06/one-shield-to-fit-them-all-and-in-the-darkness-bind-them/
@@ -56,7 +52,7 @@ void handler( CommandInterpreter::Message *msg ) {
 
 
 void handleGO(uint8_t axis, long position, long time) {
-  if ( axis >= Stepper::count() ) {
+  if ( !Stepper::indexValid(axis) ) {
     commander.sendERROR("Axis out of bounds");
   }
   
@@ -73,8 +69,8 @@ void handleGO(uint8_t axis, long position, long time) {
 
 
 void handleGET(uint8_t parameterName, uint8_t axis) {
-  if ( axis >= Stepper::count() ) {
-    commander.sendERROR("parameter axis out of bounds");
+  if ( !Stepper::indexValid(axis) ) {
+    commander.sendERROR("axis out of bounds");
     return;
   }
   
@@ -146,7 +142,7 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
       good = true;
       break;
     case P_MAX_VEL:
-      if ( value1 >= Stepper::count() || value1 < 0 ) {
+      if ( !Stepper::indexValid(value1)  ) {
         commander.sendERROR("parameter axis out of bounds");
         return;
       }
@@ -158,7 +154,7 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
       }
       break;
     case P_ACCEL:
-      if ( value1 >= Stepper::count() || value1 < 0 ) {
+      if ( !Stepper::indexValid(value1)  ) {
         commander.sendERROR("parameter axis out of bounds");
         return;
       }
@@ -170,7 +166,7 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
       }
       break;
     case P_STOP_MODE:
-      if ( value1 >= Stepper::count() || value1 < 0 ) {
+      if ( !Stepper::indexValid(value1) ) {
         commander.sendERROR("parameter axis out of bounds");
         return;
       }
@@ -183,7 +179,7 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
       }
       break;
     case P_POS:
-      if ( value1 >= Stepper::count() || value1 < 0 ) {
+      if ( !Stepper::indexValid(value1)  ) {
         commander.sendERROR("parameter axis out of bounds");
         return;
       }
@@ -211,7 +207,7 @@ void handleSTATE() {
   // to be READY or GOING
   boolean busy = false;
 
-  for ( uint8_t axis = 0; axis < Stepper::count(); axis++) {
+  for ( uint8_t axis = 1; axis <= Stepper::count(); axis++) {
     if (Stepper::getStepper(axis).busy()) {
       busy = true;
     }
@@ -304,7 +300,7 @@ char buff[25];
 void loop() {  
   commander.checkSerialInput();
 
-  for ( uint8_t axis = 0; axis < Stepper::count(); axis++) {  
+  for ( uint8_t axis = 1; axis <= Stepper::count(); axis++) { 
     if ( Stepper::getStepper(axis).checkFinished() ) {
       sprintf(buff, "DONE %d", axis);
       commander.sendNOTICE(buff);

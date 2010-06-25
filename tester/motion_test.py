@@ -16,13 +16,16 @@ ser = serial.Serial("/dev/ttyUSB0", 9600)
 stepper = stepperAxis(0)
 camera = CameraController()
 
-stepper.moveRelative(50)
 
 camera.capture('%010d.jpg' % stepper.getPosition())
-for i in range(0,200):
-    stepper.moveRelative(1)
+for i in range(0,32):
+    stepper.moveRelative(4000)
     stepper.update(ser)
-    time.sleep(1)
-    camera.capture('%010d.jpg' % stepper.getPosition())
+    time.sleep(25)
+    stepper.moveRelative(-4000)
+    stepper.update(ser)
+    time.sleep(25)
+#    camera.capture('%010d.jpg' % stepper.getPosition())
+    camera.capture('%010d.jpg' % i)
 
 

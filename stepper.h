@@ -17,6 +17,9 @@ class Stepper {
   
   static uint8_t count();
   
+  // Returns true if the specified stepper index is in bounds
+  static boolean indexValid(const int index);
+  
   static Stepper& getStepper(const int index);
   
   static void setup(unsigned int frequency_);

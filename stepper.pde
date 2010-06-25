@@ -47,10 +47,14 @@ uint8_t Stepper::count() {
   return stepperCount;
 }
 
+boolean Stepper::indexValid(const int index) {
+  return (index > 0 && index <= stepperCount);
+}
+
 Stepper& Stepper::getStepper(const int index) {
   // TODO: Test for out-of-bounds here?
   // if ( index < 0 || index >= stepperCount )
-  return *registeredSteppers[index];
+  return *registeredSteppers[index - 1];
 }
 
 int Stepper::saveSettings(int offset) {
