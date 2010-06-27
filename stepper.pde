@@ -53,6 +53,7 @@ boolean Stepper::registerStepper(Stepper* stepper_) {
   return true;
 }
 
+
 void Stepper::doStepperInterrupts() {
   for (uint8_t i = 0; i < stepperCount; i++) {
     registeredSteppers[i]->doInterrupt();
@@ -86,18 +87,21 @@ int Stepper::restoreSettings(int offset) {
   int size = 0;
   
   for (uint8_t i = 0; i < stepperCount; i++) {
+    // Read the settings in, then apply them
     size += EEPROM_readAnything(offset + size, registeredSteppers[i]->settings);
+    registeredSteppers[i]->doReset();
   }
   
   return size;
 }
 
-Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) :
-  resetPin(resetPin_),
+Stepper::Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_) :
+  enablePin(enablePin_),
   stepPin(stepPin_),
-  directionPin(directionPin_)
+  directionPin(directionPin_),
+  settings(200, 0, S_DISABLE)
 {
-  pinMode(resetPin, OUTPUT);
+  pinMode(enablePin, OUTPUT);
   pinMode(stepPin, OUTPUT);
   pinMode(directionPin, OUTPUT);
 
@@ -105,7 +109,6 @@ Stepper::Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_) :
 
   registerStepper(this);
 }
-
 
 
 void Stepper::doReset() {
@@ -119,8 +122,7 @@ void Stepper::doReset() {
 
 
   if ( settings.stopMode == S_DISABLE ) {
-    // TODO: Use enable pin instead of reset pin
-    digitalWrite(resetPin, HIGH);
+    digitalWrite(enablePin, HIGH);
   }
 }
 
@@ -167,8 +169,7 @@ boolean Stepper::moveRelative(long steps, long& time) {
   error = deltax / 2;
 
   if ( settings.stopMode = S_DISABLE ) {
-    // TODO: Use enable pin instead of reset pin
-    digitalWrite(resetPin, LOW);
+    digitalWrite(enablePin, LOW);
   }
   
   moving = true;
@@ -212,7 +213,7 @@ void Stepper::doInterrupt() {
         finished = true;
         
         if (settings.stopMode = S_DISABLE) {
-          digitalWrite(resetPin, HIGH);
+          digitalWrite(enablePin, HIGH);
         }
       } 
     }
@@ -273,10 +274,10 @@ if (moving) {
   // Update the output if we changed modes
   switch (settings.stopMode) {
     case S_DISABLE:
-      digitalWrite(resetPin, HIGH);
+      digitalWrite(enablePin, HIGH);
       break;
     case S_KEEP_ENABLED:
-      digitalWrite(resetPin, LOW);
+      digitalWrite(enablePin, LOW);
       break;
   }
   

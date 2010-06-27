@@ -37,7 +37,7 @@ class Stepper {
   
 // Instance-specific stepper stuff
  public:
-  Stepper(uint8_t resetPin_, uint8_t stepPin_, uint8_t directionPin_);
+  Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_);
   void doReset();
   
   // newPosition Position to move to, in stepper counts
@@ -73,11 +73,17 @@ class Stepper {
     long maxVelocity;
     long acceleration;
     STOP_MODES stopMode;
+
+    stepperSettings(long maxVelocity_, long acceleration_, STOP_MODES stopMode_) {
+      maxVelocity = maxVelocity_;
+      acceleration = acceleration_;
+      stopMode = stopMode_;
+    }
   };
   
   stepperSettings settings;
  
-  uint8_t resetPin;
+  uint8_t enablePin;
   uint8_t stepPin;
   uint8_t directionPin;
 
