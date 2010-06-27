@@ -1,0 +1,44 @@
+#######################################
+# Syntax Coloring Map For Messenger
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+DragonStopMotion	 KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+activatePin	 KEYWORD2
+deactivatePin	 KEYWORD2
+shootFrame	 KEYWORD2
+deleteFrame	 KEYWORD2
+togglePlay	 KEYWORD2
+goToLive	 KEYWORD2
+processPins	 KEYWORD2
+processSerial	 KEYWORD2
+
+commandFrame	 KEYWORD2
+commandExposure	 KEYWORD2
+commandExposureName	 KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+DRAGON_SHOOT_CMD	LITERAL1
+DRAGON_DELETE_CMD	LITERAL1
+DRAGON_PLAY_CMD 	LITERAL1
+DRAGON_LIVE_CMD 	LITERAL1
+
+DRAGON_SHOOT_MSG	LITERAL1
+DRAGON_DELETE_MSG	LITERAL1
+DRAGON_POSITION_MSG	LITERAL1
+DRAGON_CC_MSG 		LITERAL1
