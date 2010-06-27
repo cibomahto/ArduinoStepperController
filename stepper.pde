@@ -1,10 +1,26 @@
 #include "stepper.h"
 #include "EEPROM_templates.h"
+#include <EEPROM.h>
 
 #define signalPin 2
 
+
+#if defined(__AVR_ATmega8__) || \
+    defined(__AVR_ATmega48__) || \
+    defined(__AVR_ATmega88__) || \
+    defined(__AVR_ATmega168__) || \
+    defined(__AVR_ATmega328P__)
+
 // This function is called when timer2 overflows
 ISR(TIMER2_COMPA_vect)
+
+#elif defined(__AVR_ATmega1280__) 
+
+// This function is called when timer2 overflows
+ISR(TIMER1_COMPA_vect)
+
+#endif
+
 { 
   digitalWrite(signalPin, HIGH);
   Stepper::doStepperInterrupts();
@@ -101,13 +117,10 @@ void Stepper::doReset() {
   digitalWrite(directionPin, LOW);
   digitalWrite(stepPin, LOW);
 
-  digitalWrite(resetPin, LOW);
-  digitalWrite(resetPin, HIGH);
-
 
   if ( settings.stopMode == S_DISABLE ) {
     // TODO: Use enable pin instead of reset pin
-    digitalWrite(resetPin, LOW);
+    digitalWrite(resetPin, HIGH);
   }
 }
 
@@ -155,7 +168,7 @@ boolean Stepper::moveRelative(long steps, long& time) {
 
   if ( settings.stopMode = S_DISABLE ) {
     // TODO: Use enable pin instead of reset pin
-    digitalWrite(resetPin, HIGH);
+    digitalWrite(resetPin, LOW);
   }
   
   moving = true;
@@ -199,8 +212,7 @@ void Stepper::doInterrupt() {
         finished = true;
         
         if (settings.stopMode = S_DISABLE) {
-          // TODO: Use enable pin instead of reset pin
-          digitalWrite(resetPin, LOW);
+          digitalWrite(resetPin, HIGH);
         }
       } 
     }
@@ -261,10 +273,10 @@ if (moving) {
   // Update the output if we changed modes
   switch (settings.stopMode) {
     case S_DISABLE:
-      digitalWrite(resetPin, LOW);
+      digitalWrite(resetPin, HIGH);
       break;
     case S_KEEP_ENABLED:
-      digitalWrite(resetPin, HIGH);
+      digitalWrite(resetPin, LOW);
       break;
   }
   

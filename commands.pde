@@ -37,6 +37,11 @@
  *
  * Confirm that the controller is alive and accepting input
  *
+ * CLICK
+ * ACK CLICK
+ *
+ * Send a click to the camera, which is on the second serial port
+ *
  
 */
 
@@ -68,6 +73,7 @@ CommandInterpreter::MessageTypeDefinition CommandInterpreter::messageTypes[] = {
   { "HOME",   M_HOME       , HOME_VALUES  },  // HOME axis
   { "STATE",  M_STATE      , NO_VALUES  },    // STATE
   { "ALIVE",  M_ALIVE      , NO_VALUES  },    // ALIVE
+  { "CLICK",  M_CLICK      , NO_VALUES  },    // Send a 'click' to the camera
   { NULL,  NOT_A_MESSAGE, NULL },
 };
 
@@ -243,7 +249,7 @@ void CommandInterpreter::checkSerialInput() {
       commandBufIdx = 0;
       return;
     }
-    handler( &staticMsg );
+    cmdHandler( &staticMsg );
     commandBufIdx = 0;
   }
   

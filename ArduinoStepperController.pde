@@ -1,7 +1,10 @@
 #include "commands.h"
 #include "stepper.h"
+
 #include <EEPROM.h>
 #include "EEPROM_templates.h"
+
+#include <DragonStopMotion.h>
 
 void handler( CommandInterpreter::Message *msg );
 
@@ -29,6 +32,12 @@ Stepper stepperD(17, 18, 19);
 
 CommandInterpreter commander(handler);
 
+#if defined(__AVR_ATmega1280__) 
+
+// Dragon stop motion talks to the camera
+DragonStopMotion dsm = DragonStopMotion(Serial2);
+
+#endif
   
 void handler( CommandInterpreter::Message *msg ) {
   switch (msg->type) {
@@ -43,6 +52,9 @@ void handler( CommandInterpreter::Message *msg ) {
       break;
     case M_HOME:
       commander.sendERROR("HOME not supported in this firmware");
+      break;
+    case M_CLICK:
+      handleCLICK();
       break;
     case M_STATE:
       handleSTATE();
@@ -102,8 +114,17 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
     case P_STOP_MODE:
       // TODO: Add better interface for this
      {
-      boolean stopmode = Stepper::getStepper(axis).getStopMode();
-      sprintf(buffer, "GET STOP_MODE %d %ld", axis, stopmode);
+       int mode = 0;
+       
+      switch(Stepper::getStepper(axis).getStopMode()) {
+        case S_KEEP_ENABLED: mode = 0; break;
+        case S_DISABLE:      mode = 1; break;
+        default:
+          commander.sendERROR("stop mode not understood");
+          return;
+      }
+
+      sprintf(buffer, "GET STOP_MODE %d %d", axis, mode);
       good = true;
      }
       break;
@@ -170,8 +191,18 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
         commander.sendERROR("parameter axis out of bounds");
         return;
       }
+      
+      STOP_MODES mode;
+      switch(value2) {
+        case 0: mode = S_KEEP_ENABLED; break;
+        case 1: mode = S_DISABLE; break;
+        default:
+          commander.sendERROR("stop mode not understood");
+      }
+        
+      
       // TODO: Add better interface for this
-      good = Stepper::getStepper(value1).setStopMode((STOP_MODES)value2);
+      good = Stepper::getStepper(value1).setStopMode(mode);
       
       if ( good ) {
         saveSettings();
@@ -200,6 +231,23 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
 }
 
 
+void handleCLICK() {
+
+#if defined(__AVR_ATmega8__) || \
+    defined(__AVR_ATmega48__) || \
+    defined(__AVR_ATmega88__) || \
+    defined(__AVR_ATmega168__) || \
+    defined(__AVR_ATmega328P__)
+
+  commander.sendERROR("Can't send a click!");
+
+#elif defined(__AVR_ATmega1280__) 
+//  Serial2.print("S 1\r\n");
+  dsm.shootFrame(1);
+  commander.sendACK("CLICK");  
+
+#endif
+}
 
 
 void handleSTATE() {
@@ -272,12 +320,19 @@ void setup() {
  * 1 1 1 clkT2S/1024 (From prescaler)
 */
 
-  // Set up Timer 2 to generate interrupts on overflow, and start it.
-  // The stepper output routine is updated in the interrupt
-  
-  // Use CTC mode
-//  TCCR2A = (1<<WGM22)|(1<<WGM21)|(1<<WGM20);
-  TCCR2A = _BV(WGM21);
+
+  digitalWrite(statusLED, HIGH);
+
+// Set up Timer 2 to generate interrupts on overflow, and start it.
+// The stepper output routine is updated in the interrupt
+
+#if defined(__AVR_ATmega8__) || \
+    defined(__AVR_ATmega48__) || \
+    defined(__AVR_ATmega88__) || \
+    defined(__AVR_ATmega168__) || \
+    defined(__AVR_ATmega328P__)
+    
+  TCCR2A = (1<<WGM21);
   
   // Set the timer to use the clkT2S/8 as the clock source
   TCCR2B = (0<<CS22)|(1<<CS21)|(0<<CS20);
@@ -288,12 +343,31 @@ void setup() {
   // Finally, enable the interrupt
   TIMSK2 = (1<<OCIE2A);
 
+#elif defined(__AVR_ATmega1280__) 
+  
+  TCCR1A = 0;
+  
+  // Set the timer to use the clkT2S/8 as the clock source
+  TCCR1B = (1<<WGM12)|(0<<CS12)|(1<<CS11)|(0<<CS10);
+
+  // and set the top to ??, to generate a 10KHz wave
+  OCR1A = 198;
+  
+  // Finally, enable the interrupt
+  TIMSK1 = (1<<OCIE1A);
+
+#endif
+
+#if defined(__AVR_ATmega1280__)
+  Serial2.begin(57600);
+#endif
+
   // Setup the command handler function
   commander.begin(9600);
 
-  digitalWrite(statusLED, true);
+  // And signal that we are on
+  digitalWrite(statusLED, HIGH);
 }
-
 
 char buff[25];
 

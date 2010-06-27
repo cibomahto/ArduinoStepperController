@@ -13,6 +13,7 @@ enum MESSAGE_TYPE {
   M_HOME,
   M_STATE,
   M_ALIVE,
+  M_CLICK,
   NOT_A_MESSAGE,
 };
 
