@@ -12,11 +12,13 @@ void handler( CommandInterpreter::Message *msg );
 
 #define eepromLocation 0
 
+
 // Settings that can persist over reboots
 struct driverSettings {
   char magicCode[3];    // Should be 'meh', or the EEPROM is invalid
   long index;
 };
+
 
 driverSettings settings;
 
@@ -25,10 +27,26 @@ const long versionNumber = 1;
 
 // These are the locations of the stepper drivers, using Matts Pololu breakout shield:
 // http://www.cibomahto.com/2010/06/one-shield-to-fit-them-all-and-in-the-darkness-bind-them/
+
+#if defined(__AVR_ATmega8__) || \
+    defined(__AVR_ATmega48__) || \
+    defined(__AVR_ATmega88__) || \
+    defined(__AVR_ATmega168__) || \
+    defined(__AVR_ATmega328P__)
+
 Stepper stepperA(10, 11, 12);
 Stepper stepperB(14, 15, 16);
 Stepper stepperC(7, 8, 9);
 Stepper stepperD(17, 18, 19);
+
+#elif defined(__AVR_ATmega1280__) 
+
+Stepper stepperA(10, 11, 12);
+Stepper stepperB(54, 55, 56);
+Stepper stepperC(7, 8, 9);
+Stepper stepperD(57, 58, 59);
+
+#endif
 
 CommandInterpreter commander(handler);
 
@@ -271,12 +289,12 @@ void handleSTATE() {
 
 
 void restoreSettings() {
+  
   int offset = 0;
   offset += EEPROM_readAnything(eepromLocation, settings);
 
   // Check that the magic code is correct!
   if ( strncmp( settings.magicCode, "meh", 3) != 0) {
-//    Serial.print("Invalid EEPROM settings, resetting\n");
     // Pack some sane default settings into the structure, and save
     settings.magicCode[0] = 'm';
     settings.magicCode[1] = 'e';
@@ -285,6 +303,7 @@ void restoreSettings() {
 
     saveSettings();
     offset += Stepper::saveSettings(offset);
+    commander.sendNOTICE( "EEPROM values invalid, resetting" );
   }
   else {
     // TODO: restore settings for the steppers
