@@ -53,7 +53,7 @@ CommandInterpreter commander(handler);
 #if defined(__AVR_ATmega1280__) 
 
 // Dragon stop motion talks to the camera
-DragonStopMotion dsm = DragonStopMotion(Serial2);
+DragonStopMotion dsm = DragonStopMotion(Serial3);
 
 #endif
   
@@ -260,7 +260,7 @@ void handleCLICK() {
   commander.sendERROR("Can't send a click!");
 
 #elif defined(__AVR_ATmega1280__) 
-//  Serial2.print("S 1\r\n");
+//  Serial3.print("S 1\r\n");
   dsm.shootFrame(1);
   commander.sendACK("CLICK");  
 
@@ -378,7 +378,7 @@ void setup() {
 #endif
 
 #if defined(__AVR_ATmega1280__)
-  Serial2.begin(57600);
+  Serial3.begin(57600);
 #endif
 
   // Setup the command handler function
