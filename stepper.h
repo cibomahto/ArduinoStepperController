@@ -10,6 +10,21 @@ enum STOP_MODES {
   S_DISABLE,
 };
 
+enum HOME_DIRECTION {
+  H_FORWARD,
+  H_BACKWARD,
+};
+
+enum STEPPER_STATE {
+  S_READY,
+  S_MOVING,
+  S_FINISHED_MOVING,
+  S_HOMING_A,
+  S_HOMING_B,
+  S_FINISHED_HOMING,
+  S_ERROR,
+};
+
 class Stepper {
 // Global stepper stuff
  public:  
@@ -37,7 +52,9 @@ class Stepper {
   
 // Instance-specific stepper stuff
  public:
+  // TODO: Implement this
   Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_);
+  Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_, uint8_t limitPin_);
   void doReset();
   
   // newPosition Position to move to, in stepper counts
@@ -46,6 +63,9 @@ class Stepper {
   // steps       Steps to take, in stepper counts
   // ticks       Time it should take to move, in milliseconds
   boolean moveRelative(long steps, long& time);
+  
+  // Find the limit switch, and set it to the 0 position
+  boolean home();
   
   // Get the position
   long getPosition();
@@ -72,12 +92,16 @@ class Stepper {
   struct stepperSettings {
     long maxVelocity;
     long acceleration;
-    STOP_MODES stopMode;
+    STOP_MODES stopMode;           // Determines if the motors should be disabled when not moving
+    HOME_DIRECTION homeDirection;  // Determines which direction the axis should search for home in
+    boolean canHome;               // True if the axis supports homing
 
-    stepperSettings(long maxVelocity_, long acceleration_, STOP_MODES stopMode_) {
+    stepperSettings(long maxVelocity_, long acceleration_, STOP_MODES stopMode_, HOME_DIRECTION homeDirection_, boolean canHome_) {
       maxVelocity = maxVelocity_;
       acceleration = acceleration_;
       stopMode = stopMode_;
+      homeDirection = homeDirection_;
+      canHome = canHome_;
     }
   };
   
@@ -86,9 +110,9 @@ class Stepper {
   uint8_t enablePin;
   uint8_t stepPin;
   uint8_t directionPin;
+  uint8_t limitPin;
 
-  boolean moving;    //< Whether we are running or not
-  boolean finished;  //< True if we just finished running
+  STEPPER_STATE state;
   
   long position;      //< Current position
   long stepsLeft;     //< Number of counts until final position is reached

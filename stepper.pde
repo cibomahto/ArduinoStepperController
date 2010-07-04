@@ -2,8 +2,6 @@
 #include "EEPROM_templates.h"
 #include <EEPROM.h>
 
-#define signalPin 2
-
 
 #if defined(__AVR_ATmega8__) || \
     defined(__AVR_ATmega48__) || \
@@ -22,9 +20,7 @@ ISR(TIMER1_COMPA_vect)
 #endif
 
 { 
-  digitalWrite(signalPin, HIGH);
   Stepper::doStepperInterrupts();
-  digitalWrite(signalPin, LOW);
 }
 
 
@@ -34,12 +30,10 @@ unsigned int Stepper::frequency = 0;
 Stepper* registeredSteppers[MAX_STEPPERS];
 
 void Stepper::setup(unsigned int frequency_) {
-  
-  pinMode(signalPin, OUTPUT);
 
   // TODO: actually set up the timer using the given frequency
   
-  frequency = frequency_;  
+  frequency = frequency_;
 }
 
 boolean Stepper::registerStepper(Stepper* stepper_) {
@@ -93,18 +87,22 @@ int Stepper::restoreSettings(int offset) {
   }
   
   return size;
-}
+}  
 
-Stepper::Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_) :
+Stepper::Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_, uint8_t limitPin_) :
   enablePin(enablePin_),
   stepPin(stepPin_),
   directionPin(directionPin_),
-  settings(200, 0, S_DISABLE)
+  limitPin(limitPin_),
+  // TODO: Don't support homing by default
+  settings(200, 0, S_DISABLE, H_BACKWARD, true)
 {
   pinMode(enablePin, OUTPUT);
   pinMode(stepPin, OUTPUT);
   pinMode(directionPin, OUTPUT);
-
+  pinMode(limitPin, INPUT);
+  digitalWrite(limitPin, LOW );    // disable the pull-up resistor
+  
   doReset();
 
   registerStepper(this);
@@ -112,8 +110,7 @@ Stepper::Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_) :
 
 
 void Stepper::doReset() {
-  moving = false;
-  finished = false;
+  state = S_READY;
   
   position = 0;
 
@@ -134,13 +131,23 @@ boolean Stepper::moveRelative(long steps, long& time) {
   long frequency = 10000;  // Frequency, in Hz
   long ticks;
   
-  if ( moving ) {
+  // If we are already doing something, don't start a new motion
+  if ( busy() ) {
     return false;
   }
 
+  // If we are already there, don't bother moving
   if (steps == 0) {
-    finished = true;
+    state = S_FINISHED_MOVING;
     return true;
+  }
+  
+  // Check if we are at a limit, and only move if we can
+  if( settings.canHome && digitalRead(limitPin) == LOW) {
+    if ( steps < 0 && settings.homeDirection == H_BACKWARD ||
+         steps > 0 && settings.homeDirection == H_FORWARD ) {
+      return false;
+    }
   }
   
   // If the requested speed is too fast, set it to a speed we can achieve
@@ -172,9 +179,33 @@ boolean Stepper::moveRelative(long steps, long& time) {
     digitalWrite(enablePin, LOW);
   }
   
-  moving = true;
+  state = S_MOVING;
   
   return true;
+}
+
+boolean Stepper::home() { 
+ if ( busy() ) {
+    return false;
+  }
+  
+  boolean canMove;
+  
+  long time = 0;
+  
+  // just walk, in the hope that we get somewhere
+  if ( settings.homeDirection == H_BACKWARD ) {
+    canMove = moveRelative((long)-11000, time);
+  }
+  else {
+    canMove = moveRelative((long)11000, time);
+  }
+
+  if (canMove == true) {
+    state = S_HOMING_A;
+  }
+  
+  return canMove;
 }
 
 /*
@@ -195,7 +226,56 @@ boolean Stepper::moveRelative(long steps, long& time) {
 
 
 void Stepper::doInterrupt() {
-  if (moving) {
+  // Only run the interrupt if we are moving
+  if (state != S_MOVING && state != S_HOMING_A && state != S_HOMING_B) {
+    return;
+  }
+  
+  bool doneMoving = false;
+  
+  // Check if we just walked into the limit switch
+  if( settings.canHome && digitalRead(limitPin) == LOW ) {
+    if ( ( direction < 0 && settings.homeDirection == H_BACKWARD ) ||
+         ( direction > 0 && settings.homeDirection == H_FORWARD ) )
+    {
+      // Respond to the switch based on the state we are in
+      switch (state) {
+        case S_HOMING_A:
+          // We got to the first part of the pattern, now walk back out until we don't see the switch any more
+          state = S_HOMING_B;
+          direction = -direction;
+          
+          if (direction = 1) {
+            digitalWrite(directionPin, HIGH);
+          }
+          else {
+            digitalWrite(directionPin, LOW);
+          }
+          
+          break;
+        case S_MOVING:
+          // Oops, we hit a limit!
+          // TODO: error here.
+          // state = S_ERROR;
+          state = S_FINISHED_MOVING;
+          doneMoving = true;
+          break;
+        case S_HOMING_B:
+          // Fall through to the moving code
+          break;
+      }
+    }
+  }
+  // We didn't hit a limit switch, so check if we were trying to move away from it
+  else if ( state == S_HOMING_B ) {
+    // We got back to a place with no limit switch, so we are done!
+    state = S_FINISHED_HOMING;
+    doneMoving =  true;
+    position = 0;
+  }
+  
+  // If we are still moving, do so
+  if (!doneMoving) {
     error = error - deltay;
     if (error < 0) {
       // Do movement
@@ -209,13 +289,17 @@ void Stepper::doInterrupt() {
       error = error + deltax;
       
       if (stepsLeft == 0) {
-        moving = false;
-        finished = true;
-        
-        if (settings.stopMode = S_DISABLE) {
-          digitalWrite(enablePin, HIGH);
-        }
-      } 
+        state = S_FINISHED_MOVING;
+    
+        doneMoving =  true;
+      }
+    }
+  }
+  
+  // Stopping motion tasks
+  if (doneMoving) {
+    if (settings.stopMode = S_DISABLE) {
+      digitalWrite(enablePin, HIGH);
     }
   }
 }
@@ -226,7 +310,7 @@ long Stepper::getPosition() {
 }
 
 boolean Stepper::setPosition(long position_) {
-  if (moving) {
+  if ( busy() ) {
     return false;
   }
    
@@ -239,7 +323,7 @@ long Stepper::getMaxVelocity() {
 }
 
 boolean Stepper::setMaxVelocity(long velocity_) {
-  if (moving) {
+  if ( busy() ) {
     return false;
   }
    
@@ -252,7 +336,7 @@ long Stepper::getAcceleration() {
 }
 
 boolean Stepper::setAcceleration(long acceleration_) {
-  if (moving) {
+  if ( busy() ) {
     return false;
   }
    
@@ -265,7 +349,7 @@ STOP_MODES Stepper::getStopMode() {
 }
 
 boolean Stepper::setStopMode(STOP_MODES stopMode_) {
-if (moving) {
+if ( busy() ) {
     return false;
   }
    
@@ -285,8 +369,12 @@ if (moving) {
 }
 
 boolean Stepper::checkFinished() {
-  if (finished) {
-    finished = false;
+  if (state == S_FINISHED_MOVING) {
+    state = S_READY;
+    return true;
+  }
+  else if (state == S_FINISHED_HOMING) {
+    state = S_READY;
     return true;
   }
   
@@ -294,6 +382,6 @@ boolean Stepper::checkFinished() {
 }
 
 boolean Stepper::busy() {
-  return moving;
+  return !(state == S_READY);
 }
 

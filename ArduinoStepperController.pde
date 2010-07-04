@@ -23,7 +23,7 @@ struct driverSettings {
 driverSettings settings;
 
 // This is the version number reported from the GET VERSION command
-const long versionNumber = 1;
+const long versionNumber = 2;
 
 // These are the locations of the stepper drivers, using Matts Pololu breakout shield:
 // http://www.cibomahto.com/2010/06/one-shield-to-fit-them-all-and-in-the-darkness-bind-them/
@@ -34,17 +34,17 @@ const long versionNumber = 1;
     defined(__AVR_ATmega168__) || \
     defined(__AVR_ATmega328P__)
 
-Stepper stepperA(10, 11, 12);
-Stepper stepperB(14, 15, 16);
-Stepper stepperC(7, 8, 9);
-Stepper stepperD(17, 18, 19);
+Stepper stepperA(10, 11, 12, 3);
+Stepper stepperB(14, 15, 16, 2);
+Stepper stepperC(7, 8, 9, 2);
+Stepper stepperD(17, 18, 19, 2);
 
 #elif defined(__AVR_ATmega1280__) 
 
-Stepper stepperA(10, 11, 12);
-Stepper stepperB(54, 55, 56);
-Stepper stepperC(7, 8, 9);
-Stepper stepperD(57, 58, 59);
+Stepper stepperA(10, 11, 12, 2);
+Stepper stepperB(54, 55, 56, 2);
+Stepper stepperC(7, 8, 9, 3);
+Stepper stepperD(57, 58, 59, 2);
 
 #endif
 
@@ -69,7 +69,7 @@ void handler( CommandInterpreter::Message *msg ) {
       handleGET(msg->fields[0], msg->fields[1]);
       break;
     case M_HOME:
-      commander.sendERROR("HOME not supported in this firmware");
+      handleHOME(msg->fields[0]);
       break;
     case M_CLICK:
       handleCLICK();
@@ -249,6 +249,23 @@ void handleSET(uint8_t parameterName, long value1, long value2) {
 }
 
 
+void handleHOME(uint8_t axis) {
+  if ( !Stepper::indexValid(axis) ) {
+    commander.sendERROR("Axis out of bounds");
+  }
+  
+  if (Stepper::getStepper(axis).home()) {
+    char buffer[50];
+    sprintf(buffer, "HOME %d", axis);
+    commander.sendACK(buffer);
+  }
+  else {
+    // TODO: Give a better reason here?
+    commander.sendERROR("Couldn't home");
+  }
+}
+
+
 void handleCLICK() {
 
 #if defined(__AVR_ATmega8__) || \
@@ -294,11 +311,11 @@ void restoreSettings() {
   offset += EEPROM_readAnything(eepromLocation, settings);
 
   // Check that the magic code is correct!
-  if ( strncmp( settings.magicCode, "meh", 3) != 0) {
+  if ( strncmp( settings.magicCode, "mei", 3) != 0) {
     // Pack some sane default settings into the structure, and save
     settings.magicCode[0] = 'm';
     settings.magicCode[1] = 'e';
-    settings.magicCode[2] = 'h';
+    settings.magicCode[2] = 'i';
     settings.index = 0;
 
     saveSettings();
@@ -390,13 +407,13 @@ void setup() {
 
 char buff[25];
 
-void loop() {  
-  commander.checkSerialInput();
-
+void loop() {
   for ( uint8_t axis = 1; axis <= Stepper::count(); axis++) { 
     if ( Stepper::getStepper(axis).checkFinished() ) {
       sprintf(buff, "DONE %d", axis);
       commander.sendNOTICE(buff);
     }
   }
+  
+  commander.checkSerialInput();
 }
