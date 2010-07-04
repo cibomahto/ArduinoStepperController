@@ -1,0 +1,7 @@
+# Series of linear paths to take
+# x y z a
+0 0 0 0
+1000 0 0 0
+0 0 0 0
+1000 0 0 0
+0 0 0 0
