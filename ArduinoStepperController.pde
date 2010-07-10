@@ -35,15 +35,15 @@ const long versionNumber = 2;
     defined(__AVR_ATmega328P__)
 
 Stepper stepperA(10, 11, 12, 3);
-Stepper stepperB(14, 15, 16, 2);
+Stepper stepperB(14, 15, 16, 5);
 Stepper stepperC(7, 8, 9, 2);
 Stepper stepperD(17, 18, 19, 2);
 
 #elif defined(__AVR_ATmega1280__) 
 
-Stepper stepperA(10, 11, 12, 2);
-Stepper stepperB(54, 55, 56, 2);
-Stepper stepperC(7, 8, 9, 3);
+Stepper stepperA(10, 11, 12, 3);
+Stepper stepperB(54, 55, 56, 5);
+Stepper stepperC(7, 8, 9, 2);
 Stepper stepperD(57, 58, 59, 2);
 
 #endif
