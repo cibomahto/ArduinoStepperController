@@ -254,7 +254,7 @@ void CommandInterpreter::checkSerialInput() {
       sendACK( "ALIVE" );
       commandBufIdx = 0;
     }
-    if( handler == NULL ) {
+    if( cmdHandler == NULL ) {
       sendERROR( "No way to parse messages!" );
       commandBufIdx = 0;
       return;
