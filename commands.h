@@ -48,6 +48,7 @@ class CommandInterpreter {
   void sendACK( const char* message );
   void sendERROR( const char* message );
   void sendNOTICE( const char* message );
+  void sendDONE( const char* message );
 
  private:
   enum MESSAGE_VALUE_TYPE {

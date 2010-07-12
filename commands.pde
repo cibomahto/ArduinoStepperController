@@ -116,6 +116,12 @@ void CommandInterpreter::sendNOTICE( const char* message ) {
   Serial.print("\n");
 }
 
+void CommandInterpreter::sendDONE( const char* message ) {
+  Serial.print("DONE ");
+  Serial.print(message);
+  Serial.print("\n");
+}
+
 //returns the index of the character after the last charater in the message type or -1
 //sets msg->type and msg->typeDefIdx
 int CommandInterpreter::parseCmdType( const char *cmd, Message& msg ) {

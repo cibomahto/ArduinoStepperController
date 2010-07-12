@@ -53,7 +53,7 @@ CommandInterpreter commander(handler);
 #if defined(__AVR_ATmega1280__) 
 
 // Dragon stop motion talks to the camera
-DragonStopMotion dsm = DragonStopMotion(Serial3);
+DragonStopMotion dsm = DragonStopMotion(Serial1);
 
 #endif
   
@@ -98,12 +98,7 @@ void handleGO(uint8_t axis, long position, long time) {
 }
 
 
-void handleGET(uint8_t parameterName, uint8_t axis) {
-  if ( !Stepper::indexValid(axis) ) {
-    commander.sendERROR("axis out of bounds");
-    return;
-  }
-  
+void handleGET(uint8_t parameterName, uint8_t axis) {  
   char buffer[50];
   boolean good = false;
   switch (parameterName) {
@@ -116,6 +111,10 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
       good = true;
       break;
     case P_MAX_VEL:
+      if ( !Stepper::indexValid(axis)  ) {
+        commander.sendERROR("parameter axis out of bounds");
+        return;
+      }
      {
       long velocity = Stepper::getStepper(axis).getMaxVelocity();
       sprintf(buffer, "GET MAX_VEL %d %ld", axis, velocity);
@@ -123,6 +122,10 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
      }
       break;
     case P_ACCEL:
+      if ( !Stepper::indexValid(axis)  ) {
+        commander.sendERROR("parameter axis out of bounds");
+        return;
+      }
      {
       long acceleration = Stepper::getStepper(axis).getAcceleration();
       sprintf(buffer, "GET ACCEL %d %ld", axis, acceleration);
@@ -130,6 +133,10 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
      }
       break;
     case P_STOP_MODE:
+      if ( !Stepper::indexValid(axis)  ) {
+        commander.sendERROR("parameter axis out of bounds");
+        return;
+      }
       // TODO: Add better interface for this
      {
        int mode = 0;
@@ -147,6 +154,10 @@ void handleGET(uint8_t parameterName, uint8_t axis) {
      }
       break;
     case P_POS:
+      if ( !Stepper::indexValid(axis)  ) {
+        commander.sendERROR("parameter axis out of bounds");
+        return;
+      }
      {
       long position = Stepper::getStepper(axis).getPosition();
       sprintf(buffer, "GET POS %d %ld", axis, position);
@@ -277,7 +288,7 @@ void handleCLICK() {
   commander.sendERROR("Can't send a click!");
 
 #elif defined(__AVR_ATmega1280__) 
-//  Serial3.print("S 1\r\n");
+//  Serial1.print("S 1\r\n");
   dsm.shootFrame(1);
   commander.sendACK("CLICK");  
 
@@ -395,7 +406,7 @@ void setup() {
 #endif
 
 #if defined(__AVR_ATmega1280__)
-  Serial3.begin(57600);
+  Serial1.begin(57600);
 #endif
 
   // Setup the command handler function
@@ -410,8 +421,8 @@ char buff[25];
 void loop() {
   for ( uint8_t axis = 1; axis <= Stepper::count(); axis++) { 
     if ( Stepper::getStepper(axis).checkFinished() ) {
-      sprintf(buff, "DONE %d", axis);
-      commander.sendNOTICE(buff);
+      sprintf(buff, "%d", axis);
+      commander.sendDONE(buff);
     }
   }
   
