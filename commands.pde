@@ -74,6 +74,7 @@ CommandInterpreter::MessageTypeDefinition CommandInterpreter::messageTypes[] = {
   { "GO",     M_GO         , GO_VALUES  },    // GO axis position time
   { "STOP",   M_STOP       , NO_VALUES  },    // STOP
   { "GET",    M_GET        , GET_VALUES },    // GET param axis
+  { "SET",    M_SET        , SET_VALUES },    // SET param axis value
   { "HOME",   M_HOME       , HOME_VALUES  },  // HOME axis
   { "STATE",  M_STATE      , NO_VALUES  },    // STATE
   { "ALIVE",  M_ALIVE      , NO_VALUES  },    // ALIVE
