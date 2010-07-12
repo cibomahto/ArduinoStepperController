@@ -11,6 +11,10 @@
  * ACK is sent by the controller immediately after GO recvd.  POSITION and TIME may be modified if POSITION was out of range or TIME was too short.
  * NOTICE DONE is sent when the move completes
  * 
+ * STOP Tells the controller to stop the motion of all axis immediately
+ * ACK is sent by the controller immediately after DONE recvd.
+ * NOTICE DONE will be recieved on any axis that were moving
+ *
  * SET param value
  * ACK SET param value
  * Sets PARAM to VALUE.  Valid PARAMs are: VERSION, INDEX, MAX_VELOCITY, ACCEL, POS
@@ -68,7 +72,7 @@ CommandInterpreter::ParameterDefinition CommandInterpreter::parameterTypes[] = {
 
 CommandInterpreter::MessageTypeDefinition CommandInterpreter::messageTypes[] = {
   { "GO",     M_GO         , GO_VALUES  },    // GO axis position time
-  { "SET",    M_SET        , SET_VALUES },    // SET param axis value
+  { "STOP",   M_STOP       , NO_VALUES  },    // STOP
   { "GET",    M_GET        , GET_VALUES },    // GET param axis
   { "HOME",   M_HOME       , HOME_VALUES  },  // HOME axis
   { "STATE",  M_STATE      , NO_VALUES  },    // STATE

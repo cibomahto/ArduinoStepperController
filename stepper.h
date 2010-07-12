@@ -22,6 +22,7 @@ enum STEPPER_STATE {
   S_HOMING_A,
   S_HOMING_B,
   S_FINISHED_HOMING,
+  S_USER_STOP,
   S_ERROR,
 };
 
@@ -66,6 +67,9 @@ class Stepper {
   
   // Find the limit switch, and set it to the 0 position
   boolean home();
+  
+  // Unconditionally stops the stepper
+  void stop();
   
   // Get the position
   long getPosition();
@@ -113,6 +117,8 @@ class Stepper {
   uint8_t limitPin;
 
   STEPPER_STATE state;
+
+  boolean forceStop;  //< Flag to signal to cause the interrupt task to sop motion
   
   long position;      //< Current position
   long stepsLeft;     //< Number of counts until final position is reached

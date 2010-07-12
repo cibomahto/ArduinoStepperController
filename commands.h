@@ -8,6 +8,7 @@
 
 enum MESSAGE_TYPE {
   M_GO,
+  M_STOP,
   M_SET,
   M_GET,
   M_HOME,

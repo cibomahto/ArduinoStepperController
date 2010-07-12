@@ -111,7 +111,7 @@ Stepper::Stepper(uint8_t enablePin_, uint8_t stepPin_, uint8_t directionPin_, ui
 
 void Stepper::doReset() {
   state = S_READY;
-  
+  forceStop = false;
   position = 0;
 
   digitalWrite(directionPin, LOW);
@@ -185,7 +185,7 @@ boolean Stepper::moveRelative(long steps, long& time) {
 }
 
 boolean Stepper::home() { 
- if ( busy() ) {
+  if ( busy() ) {
     return false;
   }
   
@@ -206,6 +206,14 @@ boolean Stepper::home() {
   }
   
   return canMove;
+}
+
+void Stepper::stop() {
+  if ( !busy() ) {
+    return;
+  }
+ 
+  forceStop = true;
 }
 
 /*
@@ -232,9 +240,14 @@ void Stepper::doInterrupt() {
   }
   
   bool doneMoving = false;
-  
+ 
+  if ( forceStop ) {
+    state = S_USER_STOP;
+    doneMoving = true;
+    forceStop = false;
+  } 
   // Check if we just walked into the limit switch
-  if( settings.canHome && digitalRead(limitPin) == LOW ) {
+  else if( settings.canHome && digitalRead(limitPin) == LOW ) {
     if ( ( direction < 0 && settings.homeDirection == H_BACKWARD ) ||
          ( direction > 0 && settings.homeDirection == H_FORWARD ) )
     {
@@ -296,8 +309,8 @@ void Stepper::doInterrupt() {
     }
   }
   
-  // Stopping motion tasks
-  if (doneMoving) {
+  // Stopping motion tasks (doneMoving == TRUE)
+  else {
     if (settings.stopMode = S_DISABLE) {
       digitalWrite(enablePin, HIGH);
     }
@@ -374,6 +387,10 @@ boolean Stepper::checkFinished() {
     return true;
   }
   else if (state == S_FINISHED_HOMING) {
+    state = S_READY;
+    return true;
+  }
+  else if (state == S_USER_STOP) {
     state = S_READY;
     return true;
   }

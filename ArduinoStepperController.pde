@@ -62,6 +62,9 @@ void handler( CommandInterpreter::Message *msg ) {
     case M_GO:
       handleGO(msg->fields[0], msg->fields[1], msg->fields[2]);
       break;
+    case M_STOP:
+      handleSTOP();
+      break;
     case M_SET:
       handleSET(msg->fields[0], msg->fields[1], msg->fields[2]);
       break;
@@ -97,6 +100,14 @@ void handleGO(uint8_t axis, long position, long time) {
   }
 }
 
+
+void handleSTOP() {
+  for ( uint8_t axis = 1; axis <= Stepper::count(); axis++) { 
+    Stepper::getStepper(axis).stop();
+  }
+  
+  commander.sendACK("STOP");
+}  
 
 void handleGET(uint8_t parameterName, uint8_t axis) {  
   char buffer[50];
